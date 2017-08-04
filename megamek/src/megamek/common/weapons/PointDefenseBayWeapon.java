@@ -45,6 +45,8 @@ public class PointDefenseBayWeapon extends AmmoBayWeapon {
         this.tonnage = 0.0f;
         this.bv = 0;
         this.cost = 0;
+        setModes(new String[] { "Normal", "Point Defense" });
+        setInstantModeSwitch(false);
         this.atClass = CLASS_POINT_DEFENSE;
     }
 }

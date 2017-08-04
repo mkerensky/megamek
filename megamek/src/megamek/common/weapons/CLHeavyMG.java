@@ -61,6 +61,7 @@ public class CLHeavyMG extends MGWeapon {
         introDate = 3059;
         techLevel.put(3059, techLevel.get(3071));
         techRating = RATING_C;
+        atClass = CLASS_POINT_DEFENSE;
     }
 
 }

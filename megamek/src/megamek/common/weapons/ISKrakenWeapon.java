@@ -32,7 +32,8 @@ public class ISKrakenWeapon extends CapitalMissileWeapon {
      */
     private static final long serialVersionUID = 8756042527483383101L;
 
-    /**
+    /** Hack weapon. Exists until TeleMissiles work with an initial firing veloicty
+     *  so that Kraken warheads can be fired as normal capital missile attacks. 
      * 
      */
     public ISKrakenWeapon() {

@@ -57,5 +57,6 @@ public class ISERFlamer extends FlamerWeapon {
         introDate = 3070;
         techLevel.put(3070, techLevel.get(3071));
         techLevel.put(3081, TechConstants.T_IS_TW_NON_BOX);
+        atClass = CLASS_POINT_DEFENSE;
     }
 }

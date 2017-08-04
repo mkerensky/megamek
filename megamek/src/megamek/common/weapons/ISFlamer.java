@@ -56,5 +56,6 @@ public class ISFlamer extends FlamerWeapon {
         techLevel.put(2025, techLevel.get(3071));
         availRating = new int[] { RATING_B, RATING_B, RATING_B };
         techRating = RATING_C;
+        atClass = CLASS_POINT_DEFENSE;
     }
 }

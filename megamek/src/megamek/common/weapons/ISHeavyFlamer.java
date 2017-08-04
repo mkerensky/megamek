@@ -59,5 +59,6 @@ public class ISHeavyFlamer extends VehicleFlamerWeapon {
         introDate = 3068;
         techLevel.put(3068, techLevel.get(3071));
         techLevel.put(3079, TechConstants.T_IS_TW_NON_BOX);
+        atClass = CLASS_POINT_DEFENSE;
     }
 }

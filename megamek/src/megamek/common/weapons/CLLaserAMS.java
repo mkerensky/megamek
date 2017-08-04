@@ -41,7 +41,7 @@ public class CLLaserAMS extends LaserWeapon {
         addLookupName("Clan Laser AMS");
         heat = 5;
         rackSize = 2;
-        damage = 2; // # of d6 of missiles affected
+        damage = 2; // #d6 missiles shot down
         ammoType = AmmoType.T_AMS;
         tonnage = 1f;
         criticals = 1;
@@ -59,5 +59,8 @@ public class CLLaserAMS extends LaserWeapon {
         introDate = 3048;
         techLevel.put(3048, techLevel.get(3071));
         techLevel.put(3079, TechConstants.T_CLAN_TW);
+        atClass = CLASS_AMS;
+        shortAV = 3; // StratOps Advanced Point Defense Damage
+        maxRange = RANGE_SHORT; //TODO: add point defense range of 1.
     }
 }

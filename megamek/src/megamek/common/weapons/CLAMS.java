@@ -43,7 +43,7 @@ public class CLAMS extends AmmoWeapon {
         addLookupName("ClAMS");
         heat = 1;
         rackSize = 2;
-        damage = 2; // # of d6 of missiles affected
+        damage = 2; // # d6 missiles shot down
         ammoType = AmmoType.T_AMS;
         tonnage = 0.5f;
         criticals = 1;
@@ -58,6 +58,8 @@ public class CLAMS extends AmmoWeapon {
         techLevel.put(2831, techLevel.get(3071));
         availRating = new int[] { RATING_X, RATING_D, RATING_C };
         techRating = RATING_F;
-        atClass = CLASS_POINT_DEFENSE;
+        atClass = CLASS_AMS;
+        shortAV = 3; // StratOps Advanced Point Defense Damage
+        maxRange = RANGE_SHORT; //TODO: add point defense range of 1.
     }
 }

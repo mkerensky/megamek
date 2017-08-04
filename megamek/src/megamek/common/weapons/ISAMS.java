@@ -42,7 +42,7 @@ public class ISAMS extends AmmoWeapon {
         addLookupName("ISAMS");
         heat = 1;
         rackSize = 2;
-        damage = 1; // # of d6 of missiles affected
+        damage = 1; // # d6 missiles shot down
         ammoType = AmmoType.T_AMS;
         tonnage = 0.5f;
         criticals = 1;
@@ -58,6 +58,8 @@ public class ISAMS extends AmmoWeapon {
         reintroDate = 3040;
         availRating = new int[] { RATING_E, RATING_F, RATING_D };
         techRating = RATING_E;
-        atClass = CLASS_POINT_DEFENSE;
+        atClass = CLASS_AMS;
+        shortAV = 3; // StratOps Advanced Point Defense Damage
+        maxRange = RANGE_SHORT; //TODO: add point defense range of 1.
     }
 }

@@ -138,6 +138,7 @@ public class WeaponType extends EquipmentType {
     public static final BigInteger F_MEK_MORTAR = BigInteger.valueOf(1).shiftLeft(60);
     
     // add maximum range for AT2
+    // public static final int RANGE_PD = RangeType.RANGE_PD; Might be needed for point defense bay range of 1.
     public static final int RANGE_SHORT = RangeType.RANGE_SHORT;
     public static final int RANGE_MED = RangeType.RANGE_MEDIUM;
     public static final int RANGE_LONG = RangeType.RANGE_LONG;
@@ -168,7 +169,8 @@ public class WeaponType extends EquipmentType {
     public static final int CLASS_SCREEN = 21;
     public static final int CLASS_SUB_CAPITAL_CANNON = 22;
     public static final int CLASS_CAPITAL_MD = 23;
-    public static final int NUM_CLASSES = 24;
+    public static final int CLASS_AMS = 24;
+    public static final int NUM_CLASSES = 25;
 
     public static final int WEAPON_DIRECT_FIRE = 0;
     public static final int WEAPON_CLUSTER_BALLISTIC = 1;
@@ -519,10 +521,12 @@ public class WeaponType extends EquipmentType {
     public EquipmentType getBayType() {
         // return the correct weapons bay for the given type of weapon
         switch (atClass) {
-            case (CLASS_LASER):
+            case (CLASS_LASER):            	
                 return EquipmentType.get("Laser Bay");
             case (CLASS_POINT_DEFENSE):
                 return EquipmentType.get("Point Defense Bay");
+            case (CLASS_AMS):
+            	return EquipmentType.get("AMS Bay");
             case (CLASS_PPC):
                 return EquipmentType.get("PPC Bay");
             case (CLASS_PULSE_LASER):
@@ -1651,6 +1655,7 @@ public class WeaponType extends EquipmentType {
         EquipmentType.addType(new SCLBayWeapon());
         EquipmentType.addType(new SubCapitalMissileBayWeapon());
         EquipmentType.addType(new MiscBayWeapon());
+        EquipmentType.addType(new AMSBayWeapon());
 
         // Improved OS Weapons
         EquipmentType.addType(new ISLRM5IOS());

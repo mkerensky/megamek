@@ -59,6 +59,7 @@ public class CLAPGaussRifle extends GaussWeapon {
         introDate = 3069;
         techLevel.put(3069, TechConstants.T_CLAN_TW);
         techRating = RATING_F;
+        atClass = CLASS_POINT_DEFENSE;
     }
 
 }

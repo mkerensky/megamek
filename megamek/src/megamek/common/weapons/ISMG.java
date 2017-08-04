@@ -56,6 +56,7 @@ public class ISMG extends MGWeapon {
                 EquipmentType.RATING_A, EquipmentType.RATING_B };
         introDate = 1950;
         techLevel.put(1950, techLevel.get(3071));
+        atClass = CLASS_POINT_DEFENSE;
     }
 
 }

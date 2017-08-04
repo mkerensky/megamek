@@ -38,7 +38,7 @@ public class ISLaserAMS extends LaserWeapon {
         addLookupName("ISLaserAMS");
         heat = 7;
         rackSize = 2;
-        damage = 2; // # of d6 of missiles affected
+        damage = 2; // # d6 missiles shot down
         ammoType = AmmoType.T_NA;
         tonnage = 1.5f;
         criticals = 2;
@@ -55,5 +55,8 @@ public class ISLaserAMS extends LaserWeapon {
         introDate = 3059;
         techLevel.put(3059, techLevel.get(3071));
         techLevel.put(3079, TechConstants.T_IS_TW_NON_BOX);
+        atClass = CLASS_AMS;
+        shortAV = 3; // StratOps Advanced Point Defense Damage
+        maxRange = RANGE_SHORT; //TODO: add point defense range of 1.
     }
 }
