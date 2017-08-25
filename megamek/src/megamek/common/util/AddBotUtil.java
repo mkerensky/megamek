@@ -98,7 +98,11 @@ public class AddBotUtil {
                 parsingPlayer = true;
             } else if (arg.toLowerCase().startsWith("v:")) {
                 String verbose = arg.replaceFirst("v:", "").trim();
-                verbosity = LogLevel.getLogLevel(verbose);
+                if (StringUtil.isNumeric(verbose)) {
+                    verbosity = LogLevel.getLogLevel(Integer.parseInt(verbose));
+                } else {
+                    verbosity = LogLevel.getLogLevel(verbose);
+                }
                 if (verbosity == null) {
                     results.add("Invalid Verbosity: '" + verbose + "'.  Defaulting to ERROR.");
                     verbosity = LogLevel.ERROR;

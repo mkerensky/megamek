@@ -32,7 +32,6 @@ public class AlamoMissileWeapon extends CapitalMissileWeapon {
         techLevel.put(3071, TechConstants.T_IS_EXPERIMENTAL);
         name = "Alamo Missile";
         setInternalName(BombType.getBombWeaponName(BombType.B_ALAMO));
-        flags = flags.or(F_BOMB_WEAPON);
         heat = 0;
         damage = 10;
         rackSize = 1;

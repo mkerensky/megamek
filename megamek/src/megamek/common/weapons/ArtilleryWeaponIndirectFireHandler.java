@@ -22,6 +22,7 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Vector;
 
+import megamek.common.Aero;
 import megamek.common.AmmoType;
 import megamek.common.BattleArmor;
 import megamek.common.Compute;
@@ -144,8 +145,8 @@ public class ArtilleryWeaponIndirectFireHandler extends AmmoWeaponHandler {
         final Vector<Integer> spottersBefore = aaa.getSpotterIds();
         Coords targetPos = target.getPosition();
         final int playerId = aaa.getPlayerId();
-        boolean isFlak = (target instanceof VTOL) || target.isAero();
-        boolean asfFlak = target.isAero();
+        boolean isFlak = (target instanceof VTOL) || (target instanceof Aero);
+        boolean asfFlak = target instanceof Aero;
         Entity bestSpotter = null;
         if (ae == null) {
             System.err.println("Artillery Entity is null!");
@@ -172,7 +173,7 @@ public class ArtilleryWeaponIndirectFireHandler extends AmmoWeaponHandler {
                                             .isBlocked()
                                     && entity.isActive()
                                     // airborne aeros can't spot for arty
-                                    && !((entity.isAero()) && entity
+                                    && !((entity instanceof Aero) && entity
                                             .isAirborne())
                                     && !entity.isINarcedWith(INarcPod.HAYWIRE)) {
                                 return true;

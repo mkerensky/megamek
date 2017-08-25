@@ -71,7 +71,8 @@ public final class ASFBay extends Bay {
         boolean result = false;
 
         // Only ASFs
-        if (unit.isFighter() && !(unit instanceof FighterSquadron)) {
+        if ((unit instanceof Aero) && !(unit instanceof FighterSquadron)
+                && !(unit instanceof SmallCraft) && !(unit instanceof Jumpship)) {
             result = true;
         }
 

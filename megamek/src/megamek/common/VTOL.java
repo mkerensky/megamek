@@ -17,8 +17,6 @@
  */
 package megamek.common;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import megamek.common.options.OptionsConstants;
@@ -26,7 +24,7 @@ import megamek.common.options.OptionsConstants;
 /**
  * @author Andrew Hunter VTOLs are helicopters (more or less.)
  */
-public class VTOL extends Tank implements IBomber {
+public class VTOL extends Tank {
 
     /**
      *
@@ -70,10 +68,6 @@ public class VTOL extends Tank implements IBomber {
     public int getLocTurret2() {
         return LOC_TURRET_2;
     }
-
-    private int[] bombChoices = new int[BombType.B_NUM];
-    private Targetable bombTarget = null;
-    private List<Coords> strafingCoords = new ArrayList<>();
 
     /*
      * (non-Javadoc)
@@ -251,50 +245,6 @@ public class VTOL extends Tank implements IBomber {
     @Override
     public boolean doomedInAtmosphere() {
         return true;
-    }
-    
-    @Override
-    public boolean isBomber() {
-        return (game != null)
-                && game.getOptions().booleanOption(OptionsConstants.ADVCOMBAT_TACOPS_VTOL_ATTACKS);
-    }
-    
-    @Override
-    public int availableBombLocation(int cost) {
-        return LOC_FRONT;
-    }
-    
-    public int getMaxBombPoints() {
-        return (int) Math.round(getWeight() / 5);
-    }
-
-    public int[] getBombChoices() {
-        return bombChoices.clone();
-    }
-
-    public void setBombChoices(int[] bc) {
-        if (bc.length == bombChoices.length) {
-            bombChoices = bc;
-        }
-    }
-    
-    @Override
-    public Targetable getVTOLBombTarget() {
-        return bombTarget;
-    }
-    
-    @Override
-    public void setVTOLBombTarget(Targetable t) {
-        bombTarget = t;
-    }
-    
-    public List<Coords> getStrafingCoords() {
-        return strafingCoords;
-    }
-    
-    @Override
-    public boolean isMakingVTOLGroundAttack() {
-        return bombTarget != null || strafingCoords.size() > 0;
     }
 
     @Override
@@ -555,15 +505,6 @@ public class VTOL extends Tank implements IBomber {
         return prd;
     }
 
-
-    @Override
-    public void newRound(int roundNumber) {
-        super.newRound(roundNumber);
-        
-        bombTarget = null;
-        strafingCoords.clear();
-    }
-
     @Override
     public int getWalkMP(boolean gravity, boolean ignoreheat,
             boolean ignoremodulararmor) {
@@ -589,9 +530,6 @@ public class VTOL extends Tank implements IBomber {
         if (hasWorkingMisc(MiscType.F_DUNE_BUGGY)) {
             j--;
         }
-
-        // get bomb load
-        j = Math.max(0, j - (int) Math.ceil(getBombPoints() / 5.0));
 
         if (gravity) {
             j = applyGravityEffectsOnMP(j);

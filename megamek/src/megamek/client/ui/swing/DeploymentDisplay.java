@@ -31,6 +31,7 @@ import megamek.client.ui.SharedUtility;
 import megamek.client.ui.swing.boardview.BoardView1;
 import megamek.client.ui.swing.widget.MegamekButton;
 import megamek.client.ui.swing.widget.SkinSpecification;
+import megamek.common.Aero;
 import megamek.common.Bay;
 import megamek.common.Board;
 import megamek.common.Building;
@@ -501,7 +502,7 @@ public class DeploymentDisplay extends StatusBarPhaseDisplay {
         final IGame game = clientgui.getClient().getGame();
         final IHex deployhex = board.getHex(moveto);
         final Building bldg = board.getBuildingAt(moveto);
-        boolean isAero = ce().isAero();
+        boolean isAero = ce() instanceof Aero;
         boolean isVTOL = ce() instanceof VTOL;
         boolean isWiGE = ce().getMovementMode().equals(EntityMovementMode.WIGE);
         boolean isTankOnPavement = (ce() instanceof Tank)

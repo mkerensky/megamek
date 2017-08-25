@@ -22,13 +22,13 @@ package megamek.common.actions;
 
 import java.util.Enumeration;
 
+import megamek.common.Aero;
 import megamek.common.Compute;
 import megamek.common.Coords;
 import megamek.common.Dropship;
 import megamek.common.Entity;
 import megamek.common.EntityMovementType;
 import megamek.common.FighterSquadron;
-import megamek.common.IAero;
 import megamek.common.IGame;
 import megamek.common.IHex;
 import megamek.common.IPlayer;
@@ -94,11 +94,11 @@ public class RamAttackAction extends AbstractAttackAction {
             return new ToHitData(TargetRoll.IMPOSSIBLE, "Target is null");
         }
         
-        if(!ae.isAero()) {
+        if(!(ae instanceof Aero)) {
             return new ToHitData(TargetRoll.IMPOSSIBLE, "Attacker is not Aero");
         }
         
-        if(!target.isAero()) {
+        if(!(target instanceof Aero)) {
             return new ToHitData(TargetRoll.IMPOSSIBLE, "Target is not Aero");
         }   
         
@@ -171,7 +171,7 @@ public class RamAttackAction extends AbstractAttackAction {
         
         toHit = new ToHitData(base, "base");
 
-        IAero a = (IAero)ae;
+        Aero a = (Aero)ae;
         
         //target type
         if(target instanceof SpaceStation) {
@@ -273,34 +273,34 @@ public class RamAttackAction extends AbstractAttackAction {
      * Damage that an Aero does on a successful ramming attack
      * 
      */
-   public static int getDamageFor(IAero attacker, Entity target) {
-       int avel = attacker.getCurrentVelocity();
+   public static int getDamageFor(Aero entity, Entity target) {
+       int avel = entity.getCurrentVelocity();
        int tvel = 0;
-       if(target.isAero()) {
-           tvel = ((IAero)target).getCurrentVelocity();
+       if(target instanceof Aero) {
+           tvel = ((Aero)target).getCurrentVelocity();
        }
-       return getDamageFor(attacker, target, ((Entity)attacker).getPriorPosition(), avel, tvel);
+       return getDamageFor(entity, target, entity.getPriorPosition(), avel, tvel);
    }
    
-   public static int getDamageFor(IAero attacker, Entity target, Coords atthex, int avel, int tvel) {
+   public static int getDamageFor(Aero entity, Entity target, Coords atthex, int avel, int tvel) {
        int netv = Compute.getNetVelocity(atthex, target, avel, tvel);
        return (int) Math.ceil(
-               (((Entity)attacker).getWeight() / 10.0) * netv);
+               (entity.getWeight() / 10.0) * netv);
    }
      
    /**
     * Damage that an Aero suffers after a successful charge.
     */
-   public static int getDamageTakenBy(IAero attacker, Entity target) {
-       int avel = attacker.getCurrentVelocity();
+   public static int getDamageTakenBy(Aero entity, Entity target) {
+       int avel = entity.getCurrentVelocity();
        int tvel = 0;
-       if(target.isAero()) {
-           tvel = ((IAero)target).getCurrentVelocity();
+       if(target instanceof Aero) {
+           tvel = ((Aero)target).getCurrentVelocity();
        }
-       return getDamageTakenBy(attacker, target, ((Entity)attacker).getPriorPosition(), avel, tvel);
+       return getDamageTakenBy(entity, target, entity.getPriorPosition(), avel, tvel);
    }
    
-   public static int getDamageTakenBy(IAero attacker, Entity target, Coords atthex, int avel, int tvel) {
+   public static int getDamageTakenBy(Aero entity, Entity target, Coords atthex, int avel, int tvel) {
        int netv = Compute.getNetVelocity(atthex, target, avel, tvel);
        return (int) Math.ceil(
                (target.getWeight() / 10.0) * netv);

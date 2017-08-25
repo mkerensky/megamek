@@ -79,7 +79,7 @@ public class MechView {
         if (!entity.usesWeaponBays() || !showDetail) {
             sLoadout.append(getAmmo()).append("<br>"); //$NON-NLS-1$
         }
-        if (entity.isBomber()) {
+        if (entity instanceof Aero) {
             sLoadout.append(getBombs()).append("<br>"); //$NON-NLS-1$
         }
         sLoadout.append(getMisc()) // has to occur before basic is processed
@@ -164,8 +164,10 @@ public class MechView {
         }
 
         //We may have altered the starting mode during configuration, so we save the current one here to restore it
-        int originalMode = entity.getConversionMode();
-        entity.setConversionMode(0);
+        EntityMovementMode originalMode = entity.getMovementMode();
+        if (entity instanceof QuadVee) {
+            entity.setMovementMode(EntityMovementMode.QUAD);
+        }
         if (!isGunEmplacement) {
             sBasic.append("<br>"); //$NON-NLS-1$
             sBasic.append(Messages.getString("MechView.Movement")) //$NON-NLS-1$
@@ -201,26 +203,13 @@ public class MechView {
             sBasic.append("<br><i>(").append(Messages.getString("MechView.DWPBurdened")).append(")</i>"); //$NON-NLS-1$
         }
         if (entity instanceof QuadVee) {
-            entity.setConversionMode(QuadVee.CONV_MODE_VEHICLE);
+            entity.setMovementMode(((QuadVee)entity).getMotiveType() == QuadVee.MOTIVE_WHEEL?
+                    EntityMovementMode.WHEELED : EntityMovementMode.TRACKED);
             sBasic.append("<br>").append(Messages.getString("MovementType."
                     + entity.getMovementModeAsString())).append(": ") //$NON-NLS-1$
                 .append(entity.getWalkMP()).append("/") //$NON-NLS-1$
                 .append(entity.getRunMPasString());
-            entity.setConversionMode(originalMode);
-        } else if (entity instanceof LandAirMech) {
-            if (((LandAirMech)entity).getLAMType() == LandAirMech.LAM_STANDARD) {
-                sBasic.append("<br>").append(Messages.getString("MovementType.AirMech")).append(": ") //$NON-NLS-1$
-                .append(((LandAirMech)entity).getAirMechWalkMP()).append("/")
-                .append(((LandAirMech)entity).getAirMechRunMP()).append("/")
-                .append(((LandAirMech)entity).getAirMechCruiseMP()).append("/")
-                .append(((LandAirMech)entity).getAirMechFlankMP());
-            }
-
-            entity.setConversionMode(LandAirMech.CONV_MODE_FIGHTER);
-            sBasic.append("<br>").append(Messages.getString("MovementType.Fighter")).append(": ") //$NON-NLS-1$            
-            .append(entity.getWalkMP()).append("/") //$NON-NLS-1$
-            .append(entity.getRunMP());
-            entity.setConversionMode(originalMode);
+            entity.setMovementMode(originalMode);
         }
         if (isVehicle) {
             sBasic.append(" (") //$NON-NLS-1$
@@ -845,8 +834,8 @@ public class MechView {
 
     private String getBombs() {
         StringBuffer sBombs = new StringBuffer();
-        IBomber b = (IBomber) entity;
-        int[] choices = b.getBombChoices();
+        Aero a = (Aero) entity;
+        int[] choices = a.getBombChoices();
         for (int type = 0; type < BombType.B_NUM; type++) {
             if (choices[type] > 0) {
                 sBombs.append(BombType.getBombName(type)).append(" (")

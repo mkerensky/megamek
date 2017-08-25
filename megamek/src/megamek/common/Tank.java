@@ -2172,7 +2172,7 @@ public class Tank extends Entity {
     }
 
     @Override
-    public int getHeatCapacity(boolean radicalHeatSinks) {
+    public int getHeatCapacity() {
         return 999;
     }
 

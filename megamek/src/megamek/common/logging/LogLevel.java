@@ -13,9 +13,6 @@
  */
 package megamek.common.logging;
 
-import megamek.common.annotations.Nullable;
-import org.apache.log4j.Level;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,37 +24,35 @@ import java.util.List;
  * @since: 9/7/13 9:31 AM
  */
 public enum LogLevel {
-    OFF(Level.OFF),
-    FATAL(Level.FATAL),
-    ERROR(Level.ERROR),
-    WARNING(Level.WARN),
-    INFO(Level.INFO),
-    DEBUG(Level.DEBUG),
-    TRACE(Level.TRACE);
+    ERROR(0), WARNING(1), INFO(2), DEBUG(3), TRACE(4);
 
-    private final Level level;
+    private int level;
 
-    LogLevel(Level level) {
+    LogLevel(int level) {
         this.level = level;
     }
 
-    public Level getLevel() {
+    public int getLevel() {
         return level;
     }
 
-    public int toInt() {
-        return level.toInt();
-    }
-
     public static String[] getLogLevelNames() {
-        List<String> out = new ArrayList<>();
+        List<String> out = new ArrayList<String>();
         for (LogLevel l : values()) {
             out.add(l.toString());
         }
         return out.toArray(new String[out.size()]);
     }
 
-    public static LogLevel getLogLevel(final String levelName) {
+    public static Integer[] getLogLevels() {
+        List<Integer> out = new ArrayList<Integer>();
+        for (LogLevel l : values()) {
+            out.add(l.getLevel());
+        }
+        return out.toArray(new Integer[out.size()]);
+    }
+
+    public static LogLevel getLogLevel(String levelName) {
         for (LogLevel l : values()) {
             if (l.toString().equalsIgnoreCase(levelName)) {
                 return l;
@@ -66,22 +61,11 @@ public enum LogLevel {
         return null;
     }
 
-    @Nullable
-    public static LogLevel getFromLog4jLevel(final int level) {
-        if (Level.FATAL_INT == level) {
-            return FATAL;
-        } else if (Level.ERROR_INT == level) {
-            return ERROR;
-        } else if (Level.WARN_INT == level) {
-            return WARNING;
-        } else if (Level.INFO_INT == level) {
-            return INFO;
-        } else if (Level.DEBUG_INT == level) {
-            return DEBUG;
-        } else if (Level.TRACE_INT == level) {
-            return TRACE;
-        } else if (Level.OFF_INT == level) {
-            return OFF;
+    public static LogLevel getLogLevel(int level) {
+        for (LogLevel l : values()) {
+            if (l.getLevel() == level) {
+                return l;
+            }
         }
         return null;
     }

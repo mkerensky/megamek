@@ -672,7 +672,7 @@ public class Infantry extends Entity {
      * Infantry build no heat.
      */
     @Override
-    public int getHeatCapacity(boolean radicalHeatSinks) {
+    public int getHeatCapacity() {
         return 999;
     }
 

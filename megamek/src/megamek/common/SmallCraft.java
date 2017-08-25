@@ -754,11 +754,6 @@ public class SmallCraft extends Aero {
         return Entity.ETYPE_AERO | Entity.ETYPE_SMALL_CRAFT;
     }
     
-    @Override
-    public boolean isFighter() {
-        return false;
-    }
-
     /**
      * Do not recalculate walkMP when adding engine.
      */

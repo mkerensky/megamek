@@ -17,9 +17,6 @@ public class QuadVee extends QuadMech {
      * 
      */
     private static final long serialVersionUID = 1283551018632228647L;
-    
-    public static final int CONV_MODE_MECH    = 0;
-    public static final int CONV_MODE_VEHICLE = 1;
 
     public static final int SYSTEM_CONVERSION_GEAR = 15;
     
@@ -115,7 +112,7 @@ public class QuadVee extends QuadMech {
      */
     @Override
     public int getWalkMP(boolean gravity, boolean ignoreheat, boolean ignoremodulararmor) {
-        if (getConversionMode() == CONV_MODE_VEHICLE) {
+        if (isInVehicleMode()) {
             return getCruiseMP(gravity, ignoreheat, ignoremodulararmor);
         } else {
             return super.getWalkMP(gravity, ignoreheat, ignoremodulararmor);
@@ -198,7 +195,7 @@ public class QuadVee extends QuadMech {
      */
     @Override
     public int getSprintMP() {
-        if (getConversionMode() == CONV_MODE_VEHICLE && (game == null || !game.getOptions()
+        if (isInVehicleMode() && (game == null || !game.getOptions()
                 .booleanOption(OptionsConstants.ADVGRNDMOV_VEHICLE_ADVANCED_MANEUVERS))) {
             return getRunMP();
         }
@@ -213,7 +210,7 @@ public class QuadVee extends QuadMech {
     @Override
     public int getSprintMP(boolean gravity, boolean ignoreheat,
             boolean ignoremodulararmor) {
-        if (getConversionMode() == CONV_MODE_VEHICLE && (game == null || !game.getOptions()
+        if (isInVehicleMode() && (game == null || !game.getOptions()
                 .booleanOption(OptionsConstants.ADVGRNDMOV_VEHICLE_ADVANCED_MANEUVERS))) {
             return getRunMP(gravity, ignoreheat, ignoremodulararmor);
         }
@@ -229,7 +226,7 @@ public class QuadVee extends QuadMech {
     @Override
     public int getSprintMPwithoutMASC(boolean gravity, boolean ignoreheat,
             boolean ignoremodulararmor) {
-        if (getConversionMode() == CONV_MODE_VEHICLE) {
+        if (isInVehicleMode()) {
             if (game == null || !game.getOptions()
                     .booleanOption(OptionsConstants.ADVGRNDMOV_VEHICLE_ADVANCED_MANEUVERS)) {
                 return getRunMPwithoutMASC(gravity, ignoreheat, ignoremodulararmor);
@@ -243,7 +240,7 @@ public class QuadVee extends QuadMech {
     }
 
     public int getOriginalSprintMPwithoutMASC() {
-        if (getConversionMode() == CONV_MODE_VEHICLE && (game == null || !game.getOptions()
+        if (isInVehicleMode() && (game == null || !game.getOptions()
                 .booleanOption(OptionsConstants.ADVGRNDMOV_VEHICLE_ADVANCED_MANEUVERS))) {
             return getOriginalRunMP();
         } else {
@@ -254,7 +251,7 @@ public class QuadVee extends QuadMech {
      * No jumping in vehicle mode.
      */
     public int getJumpMP(boolean gravity, boolean ignoremodulararmor) {
-        if (getConversionMode() == CONV_MODE_VEHICLE || convertingNow) {
+        if (isInVehicleMode() || convertingNow) {
             return 0;
         }
         return super.getJumpMP(gravity, ignoremodulararmor);
@@ -264,7 +261,7 @@ public class QuadVee extends QuadMech {
      * In a QuadVee they're all torso jump jets. But they still don't work in vehicle mode.
      */
     public int torsoJumpJets() {
-        if (getConversionMode() == CONV_MODE_VEHICLE || convertingNow) {
+        if (isInVehicleMode() || convertingNow) {
             return 0;
         }
         return super.torsoJumpJets();
@@ -274,7 +271,7 @@ public class QuadVee extends QuadMech {
      * UMUs do not function in vehicle mode
      */
     public int getActiveUMUCount() {
-        if (getConversionMode() == CONV_MODE_VEHICLE || convertingNow) {
+        if (isInVehicleMode() || convertingNow) {
             return 0;
         }
         return super.getActiveUMUCount();
@@ -286,7 +283,7 @@ public class QuadVee extends QuadMech {
      */
     @Override
     public boolean hasArmedMASC() {
-        boolean superchargerOnly = getConversionMode() == CONV_MODE_VEHICLE;
+        boolean superchargerOnly = isInVehicleMode();
         for (Mounted m : getEquipment()) {
             if (!m.isDestroyed() && !m.isBreached()
                     && (m.getType() instanceof MiscType)
@@ -304,7 +301,7 @@ public class QuadVee extends QuadMech {
      */
     @Override
     public boolean hasArmedMASCAndSuperCharger() {
-        if (getConversionMode() == CONV_MODE_VEHICLE) {
+        if (isInVehicleMode()) {
             return false;
         }
         return super.hasArmedMASCAndSuperCharger();
@@ -315,7 +312,7 @@ public class QuadVee extends QuadMech {
      */
     @Override
     public int getStandingHeat() {
-        if (getConversionMode() == CONV_MODE_VEHICLE && !convertingNow) {
+        if (isInVehicleMode() && !convertingNow) {
             return 0;
         }
         return super.getStandingHeat();
@@ -323,7 +320,7 @@ public class QuadVee extends QuadMech {
 
     @Override
     public int getWalkHeat() {
-        if (getConversionMode() == CONV_MODE_VEHICLE && !convertingNow) {
+        if (isInVehicleMode() && !convertingNow) {
             return 0;
         }
         return super.getWalkHeat();
@@ -331,7 +328,7 @@ public class QuadVee extends QuadMech {
 
     @Override
     public int getRunHeat() {
-        if (getConversionMode() == CONV_MODE_VEHICLE && !convertingNow) {
+        if (isInVehicleMode() && !convertingNow) {
             return 0;
         }
         return super.getRunHeat();
@@ -339,7 +336,7 @@ public class QuadVee extends QuadMech {
 
     @Override
     public int getSprintHeat() {
-        if (getConversionMode() == CONV_MODE_VEHICLE && !convertingNow) {
+        if (isInVehicleMode() && !convertingNow) {
             return 0;
         }
         return super.getSprintHeat();
@@ -351,7 +348,7 @@ public class QuadVee extends QuadMech {
      */
     @Override
     public boolean hasHipCrit() {
-        if (getConversionMode() == CONV_MODE_VEHICLE && !convertingNow) {
+        if (isInVehicleMode() && !convertingNow) {
             return false;
         }
         return super.hasHipCrit();
@@ -370,43 +367,16 @@ public class QuadVee extends QuadMech {
     }
     
     @Override
-    public void setMovementMode(EntityMovementMode mode) {
-        if (mode == EntityMovementMode.TRACKED
-                || mode == EntityMovementMode.WHEELED) {
-            setConversionMode(CONV_MODE_VEHICLE);
-        } else {
-            setConversionMode(CONV_MODE_MECH);
-        }
-        super.setMovementMode(mode);
-    }
-    
-    @Override
-    public void setConversionMode(int mode) {
-        if (mode == getConversionMode()) {
-            return;
-        }
-        if (mode == CONV_MODE_MECH) {
-            super.setMovementMode(EntityMovementMode.QUAD);
-        } else if (mode == CONV_MODE_VEHICLE) {
-            super.setMovementMode(motiveType == MOTIVE_WHEEL?
-                    EntityMovementMode.WHEELED : EntityMovementMode.TRACKED);
-        } else {
-            return;
-        }
-        super.setConversionMode(mode);
-    }
-    
-    @Override
     public boolean isEligibleForPavementBonus() {
         //Since pavement bonus only applies if driving on pavement the entire turn,
         //there is no pavement bonus unless it spends the entire turn in vehicle mode.
-        return getConversionMode() == CONV_MODE_VEHICLE && !convertingNow;
+        return isInVehicleMode() && !convertingNow;
     }
     
     @Override
     public boolean canFall(boolean gyroLegDamage) {
         //QuadVees cannot fall due to failed PSR in vehicle mode.
-        return getConversionMode() == CONV_MODE_MECH || convertingNow;
+        return !isInVehicleMode() || convertingNow;
     }
     
     /**
@@ -433,10 +403,19 @@ public class QuadVee extends QuadMech {
     }
 
     /**
+     * @return Whether the QuadVee is currently in vehicle mode. During this movement phase
+     *         this is based on the final mode if converting.
+     */
+    public boolean isInVehicleMode() {
+        return movementMode == EntityMovementMode.TRACKED
+                || movementMode == EntityMovementMode.WHEELED;
+    }
+    
+    /**
      * In vehicle mode the QuadVee is at the same level as the terrain.
      */
     public int height() {
-        if (getConversionMode() == CONV_MODE_VEHICLE) {
+        if (isInVehicleMode()) {
             return 0;
         }
         return super.height();
@@ -444,7 +423,7 @@ public class QuadVee extends QuadMech {
 
     @Override
     public int getMaxElevationChange() {
-        if (getConversionMode() == CONV_MODE_VEHICLE) {
+        if (isInVehicleMode()) {
             return 1;
         }
         return 2;
@@ -464,7 +443,7 @@ public class QuadVee extends QuadMech {
             return dir == 0;
         }
         //Turret rotation always works in vehicle mode.
-        if (getConversionMode() == CONV_MODE_VEHICLE) {
+        if (isInVehicleMode()) {
             return true;
         }
         
@@ -497,7 +476,7 @@ public class QuadVee extends QuadMech {
             roll.addModifier(2, "pilot incapacitated");
         }
         
-        if (getConversionMode() == CONV_MODE_VEHICLE) {
+        if (isInVehicleMode()) {
             for (int loc = 0; loc < locations(); loc++) {
                 if (locationIsLeg(loc)
                         && (isLocationBad(loc) || getCritical(loc, 5).isHit())) {
@@ -535,7 +514,7 @@ public class QuadVee extends QuadMech {
     
     @Override
     public boolean usesTurnMode() {
-        return getConversionMode() == CONV_MODE_VEHICLE && !convertingNow
+        return isInVehicleMode() && !convertingNow
                 && game != null && game.getOptions().booleanOption(OptionsConstants.ADVGRNDMOV_TURN_MODE);
     }
 
@@ -547,7 +526,7 @@ public class QuadVee extends QuadMech {
      */
     @Override
     public boolean canGoHullDown() {
-        if (getConversionMode() == CONV_MODE_VEHICLE != convertingNow) {
+        if (isInVehicleMode() != convertingNow) {
             IHex occupiedHex = game.getBoard().getHex(getPosition());
             return occupiedHex.containsTerrain(Terrains.FORTIFIED)
                     && game.getOptions().booleanOption(OptionsConstants.ADVGRNDMOV_TACOPS_HULL_DOWN);
@@ -561,12 +540,12 @@ public class QuadVee extends QuadMech {
      */
     @Override
     public boolean isEligibleForPhysical() {
-        return getConversionMode() == CONV_MODE_MECH && super.isEligibleForPhysical();
+        return !isInVehicleMode() && super.isEligibleForPhysical();
     }
         
     @Override
     public String getTilesetModeString() {
-        if (getConversionMode() == CONV_MODE_VEHICLE) {
+        if (isInVehicleMode()) {
             return "_VEHICLE";
         } else {
             return "";

@@ -42,16 +42,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Vector;
+import java.util.*;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -82,19 +73,21 @@ import megamek.client.ui.swing.boardview.BoardView1;
 import megamek.client.ui.swing.unitDisplay.UnitDisplay;
 import megamek.client.ui.swing.util.MegaMekController;
 import megamek.client.ui.swing.util.PlayerColors;
+import megamek.common.Aero;
 import megamek.common.Configuration;
 import megamek.common.Coords;
 import megamek.common.Entity;
 import megamek.common.EntityListFile;
-import megamek.common.IBomber;
 import megamek.common.IGame;
+import megamek.common.Jumpship;
+import megamek.common.SmallCraft;
 import megamek.common.IGame.Phase;
 import megamek.common.IPlayer;
 import megamek.common.MechSummaryCache;
 import megamek.common.Mounted;
 import megamek.common.MovePath;
-import megamek.common.MovePath.MoveStepType;
 import megamek.common.WeaponOrderHandler;
+import megamek.common.MovePath.MoveStepType;
 import megamek.common.actions.EntityAction;
 import megamek.common.actions.WeaponAttackAction;
 import megamek.common.event.GameCFREvent;
@@ -109,7 +102,7 @@ import megamek.common.event.GamePlayerConnectedEvent;
 import megamek.common.event.GamePlayerDisconnectedEvent;
 import megamek.common.event.GameReportEvent;
 import megamek.common.event.GameSettingsChangeEvent;
-import megamek.common.logging.DefaultMmLogger;
+import megamek.common.logging.Logger;
 import megamek.common.net.Packet;
 import megamek.common.preference.PreferenceManager;
 import megamek.common.util.AddBotUtil;
@@ -597,7 +590,7 @@ public class ClientGUI extends JPanel implements WindowListener, BoardViewListen
         } catch (MalformedURLException e) {
             JOptionPane.showMessageDialog(this, e.getMessage(), "ERROR", 
                     JOptionPane.ERROR_MESSAGE);
-            DefaultMmLogger.getInstance().log(getClass(), "showSkinningHowTo", e);
+            new Logger().log(getClass(), "showSkinningHowTo", e);
         }
     }
 
@@ -1522,8 +1515,10 @@ public class ClientGUI extends JPanel implements WindowListener, BoardViewListen
                         // the movement turn are considered selectable
                         entity.setDone(true);
                         entity.setUnloaded(true);
-                        if (entity instanceof IBomber) {
-                            ((IBomber)entity).applyBombs();
+                        if ((entity instanceof Aero)
+                                && !((entity instanceof SmallCraft) 
+                                        || (entity instanceof Jumpship))) {
+                            ((Aero)entity).applyBombs();
                         }
                     }
                 }

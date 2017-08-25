@@ -60,17 +60,14 @@ import megamek.common.Entity;
 import megamek.common.EntityMovementMode;
 import megamek.common.EquipmentType;
 import megamek.common.GunEmplacement;
-import megamek.common.IAero;
 import megamek.common.IGame;
 import megamek.common.IPlayer;
 import megamek.common.Infantry;
-import megamek.common.LAMPilot;
 import megamek.common.LandAirMech;
 import megamek.common.Mech;
 import megamek.common.MiscType;
 import megamek.common.Mounted;
 import megamek.common.OffBoardDirection;
-import megamek.common.Protomech;
 import megamek.common.QuadVee;
 import megamek.common.Tank;
 import megamek.common.TechConstants;
@@ -271,7 +268,6 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
         boolean isWiGE = true;
         boolean isQuadVee = true;
         boolean isLAM = true;
-        boolean isGlider = true;
         boolean eligibleForOffBoard = true;
         
         for (Entity e : entities) {
@@ -281,7 +277,6 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
             isWiGE &= e instanceof Tank && e.getMovementMode() == EntityMovementMode.WIGE;
             isQuadVee &= e instanceof QuadVee;
             isLAM &= e instanceof LandAirMech;
-            isGlider &= e instanceof Protomech && e.getMovementMode() == EntityMovementMode.WIGE;
             boolean entityEligibleForOffBoard = false;
             for (Mounted mounted : e.getWeaponList()) {
                 WeaponType wtype = (WeaponType) mounted.getType();
@@ -399,9 +394,15 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                     .getString("CustomMechDialog.startingModeToolTip")); //$NON-NLS-1$
             choStartingMode.setToolTipText(Messages
                     .getString("CustomMechDialog.startingModeToolTip")); //$NON-NLS-1$
-            refreshDeployment();
         }
-        if (isVTOL || isLAM || isGlider) {
+        if (isAero) {
+            panDeploy.add(labStartVelocity, GBC.std());
+            panDeploy.add(fldStartVelocity, GBC.eol());
+
+            panDeploy.add(labStartAltitude, GBC.std());
+            panDeploy.add(fldStartAltitude, GBC.eol());
+        }
+        if (isVTOL) {
             panDeploy.add(labStartHeight, GBC.std());
             panDeploy.add(fldStartHeight, GBC.eol());
         }
@@ -409,13 +410,6 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
             panDeploy.add(new JLabel(Messages.getString(
                     "CustomMechDialog.labDeployAirborne"), SwingConstants.RIGHT), GBC.std()); //$NON-NLS-1$
             panDeploy.add(chDeployAirborne, GBC.eol());
-        }
-        if (isAero || isLAM) {
-            panDeploy.add(labStartVelocity, GBC.std());
-            panDeploy.add(fldStartVelocity, GBC.eol());
-
-            panDeploy.add(labStartAltitude, GBC.std());
-            panDeploy.add(fldStartAltitude, GBC.eol());
         }
 
         choDeploymentRound.addItemListener(this);
@@ -486,17 +480,18 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
 
         setupButtons();
 
-        if (isAero || isLAM) {
-            IAero a = (IAero) entity;
+        if (isAero) {
+            Aero a = (Aero) entity;
             fldStartVelocity.setText(new Integer(a.getCurrentVelocity())
                     .toString());
             fldStartVelocity.addActionListener(this);
 
-            fldStartAltitude.setText(new Integer(entity.getAltitude()).toString());
+            fldStartAltitude.setText(new Integer(a.getAltitude()).toString());
             fldStartAltitude.addActionListener(this);
         }
-        if (isVTOL || isLAM || isGlider) {
-            fldStartHeight.setText(new Integer(entity.getElevation()).toString());
+        if (isVTOL) {
+            VTOL v = (VTOL) entity;
+            fldStartHeight.setText(new Integer(v.getElevation()).toString());
             fldStartHeight.addActionListener(this);
         }
         if (isWiGE) {
@@ -792,10 +787,9 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
             choStartingMode.removeAllItems();
             choStartingMode.addItem(Messages.getString("CustomMechDialog.ModeQuad"));
             choStartingMode.addItem(Messages.getString("CustomMechDialog.ModeVehicle"));
-            if (entity.getConversionMode() == QuadVee.CONV_MODE_VEHICLE) {
+            if (((QuadVee)entity).isInVehicleMode()) {
                 choStartingMode.setSelectedIndex(1);
             }
-            updateStartingModeOptions();
             choStartingMode.addItemListener(this);
         } else if (entity instanceof LandAirMech) {
             choStartingMode.removeItemListener(this);
@@ -805,12 +799,11 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                 choStartingMode.addItem(Messages.getString("CustomMechDialog.ModeAirMech"));
             }
             choStartingMode.addItem(Messages.getString("CustomMechDialog.ModeFighter"));
-            if (entity.getConversionMode() == LandAirMech.CONV_MODE_AIRMECH) {
+            if (entity.getMovementMode() == EntityMovementMode.AIRMECH) {
                 choStartingMode.setSelectedIndex(1);
-            } else if (entity.getConversionMode() == LandAirMech.CONV_MODE_FIGHTER) {
+            } else if (entity.getMovementMode() == EntityMovementMode.AERODYNE) {
                 choStartingMode.setSelectedIndex(choStartingMode.getItemCount() - 1);
             }
-            updateStartingModeOptions();
             choStartingMode.addItemListener(this);
         }
         
@@ -944,22 +937,12 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
         boolean isWiGE = true;
         boolean isQuadVee = true;
         boolean isLAM = true;
-        boolean isAirMech = true;
-        boolean isGlider = true;
         for (Entity e : entities) {
-            isAero &= e instanceof Aero
-                    || e instanceof LandAirMech
-                        && (choStartingMode.getSelectedIndex() == 2
-                            || ((LandAirMech)e).getLAMType() == LandAirMech.LAM_BIMODAL
-                                && choStartingMode.getSelectedIndex() == 1);
+            isAero &= e instanceof Aero;
             isVTOL &= e instanceof VTOL;
             isWiGE &= e instanceof Tank && e.getMovementMode() == EntityMovementMode.WIGE;
             isQuadVee &= e instanceof QuadVee;
             isLAM &= e instanceof LandAirMech;
-            isAirMech &= e instanceof LandAirMech
-                    && ((LandAirMech)e).getLAMType() == LandAirMech.LAM_STANDARD
-                    && choStartingMode.getSelectedIndex() == 1;
-            isGlider &= e instanceof Protomech && e.getMovementMode() == EntityMovementMode.WIGE;
         }
 
         // get values
@@ -978,7 +961,7 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                 velocity = Integer.parseInt(fldStartVelocity.getText());
                 altitude = Integer.parseInt(fldStartAltitude.getText());
             }
-            if (isVTOL || isAirMech) {
+            if (isVTOL) {
                 height = Integer.parseInt(fldStartHeight.getText());
             }
             if (isWiGE) {
@@ -1014,9 +997,7 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
             }
         }
 
-        if (isVTOL && (height > 50)
-                || (isAirMech && height > 25)
-                || (isGlider && height > 12)) {
+        if (isVTOL && (height > 50)) {
             msg = Messages.getString("CustomMechDialog.EnterCorrectHeight"); //$NON-NLS-1$
             title = Messages.getString("CustomMechDialog.NumberFormatError"); //$NON-NLS-1$
             JOptionPane.showMessageDialog(clientgui.frame, msg, title,
@@ -1037,11 +1018,6 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                 int gunneryB;
                 int artillery;
                 int piloting;
-                int gunneryAero;
-                int gunneryAeroL;
-                int gunneryAeroM;
-                int gunneryAeroB;
-                int pilotingAero;
                 int tough = 0;
                 int backup = panCrewMember[i].getBackup();
                 try {
@@ -1050,11 +1026,6 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                     gunneryM = panCrewMember[i].getGunneryM();
                     gunneryB = panCrewMember[i].getGunneryB();
                     piloting = panCrewMember[i].getPiloting();
-                    gunneryAero = panCrewMember[i].getGunneryAero();
-                    gunneryAeroL = panCrewMember[i].getGunneryAeroL();
-                    gunneryAeroM = panCrewMember[i].getGunneryAeroM();
-                    gunneryAeroB = panCrewMember[i].getGunneryAeroB();
-                    pilotingAero = panCrewMember[i].getPilotingAero();
                     artillery = panCrewMember[i].getArtillery();
                     tough = panCrewMember[i].getToughness();
                 } catch (NumberFormatException e) {
@@ -1069,9 +1040,6 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                 if ((gunnery < 0) || (gunnery > 8) || (piloting < 0) || (piloting > 8)
                         || (gunneryL < 0) || (gunneryL > 8) || (gunneryM < 0)
                         || (gunneryM > 8) || (gunneryB < 0) || (gunneryB > 8)
-                        || (gunneryAero < 0) || (gunneryAero > 8) || (pilotingAero < 0) || (pilotingAero > 8)
-                        || (gunneryAeroL < 0) || (gunneryAeroL > 8) || (gunneryAeroM < 0)
-                        || (gunneryAeroM > 8) || (gunneryAeroB < 0) || (gunneryAeroB > 8)                        
                         || (artillery < 0) || (artillery > 8)) {
                     msg = Messages.getString("CustomMechDialog.EnterSkillsBetween0_8"); //$NON-NLS-1$
                     title = Messages.getString("CustomMechDialog.NumberFormatError"); //$NON-NLS-1$
@@ -1080,43 +1048,18 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                     return;
                 }
 
-                if (entity.getCrew() instanceof LAMPilot) {
-                    LAMPilot pilot = (LAMPilot)entity.getCrew();
-                    if (client.getGame().getOptions().booleanOption(OptionsConstants.RPG_RPG_GUNNERY)) {
-                        pilot.setGunneryMechL(gunneryL);
-                        pilot.setGunneryMechB(gunneryB);
-                        pilot.setGunneryMechM(gunneryM);
-                        pilot.setGunneryMech((int)Math.round((gunneryL + gunneryB + gunneryM) / 3.0));
-                        pilot.setGunneryAeroL(gunneryAeroL);
-                        pilot.setGunneryAeroB(gunneryAeroB);
-                        pilot.setGunneryAeroM(gunneryAeroM);
-                        pilot.setGunneryAero((int)Math.round((gunneryAeroL + gunneryAeroB + gunneryAeroM) / 3.0));
-                    } else {
-                        pilot.setGunneryMechL(gunnery);
-                        pilot.setGunneryMechB(gunnery);
-                        pilot.setGunneryMechM(gunnery);
-                        pilot.setGunneryMech(gunnery);
-                        pilot.setGunneryAeroL(gunneryAero);
-                        pilot.setGunneryAeroB(gunneryAero);
-                        pilot.setGunneryAeroM(gunneryAero);
-                        pilot.setGunneryAero(gunneryAero);
-                    }
-                    pilot.setPilotingMech(piloting);
-                    pilot.setPilotingAero(pilotingAero);
+                if (client.getGame().getOptions().booleanOption(OptionsConstants.RPG_RPG_GUNNERY)) {
+                    entity.getCrew().setGunneryL(gunneryL, i);
+                    entity.getCrew().setGunneryB(gunneryB, i);
+                    entity.getCrew().setGunneryM(gunneryM, i);
+                    entity.getCrew().setGunnery((int)Math.round((gunneryL + gunneryB + gunneryM) / 3.0), i);
                 } else {
-                    if (client.getGame().getOptions().booleanOption(OptionsConstants.RPG_RPG_GUNNERY)) {
-                        entity.getCrew().setGunneryL(gunneryL, i);
-                        entity.getCrew().setGunneryB(gunneryB, i);
-                        entity.getCrew().setGunneryM(gunneryM, i);
-                        entity.getCrew().setGunnery((int)Math.round((gunneryL + gunneryB + gunneryM) / 3.0), i);
-                    } else {
-                        entity.getCrew().setGunnery(gunnery, i);
-                        entity.getCrew().setGunneryL(gunnery, i);
-                        entity.getCrew().setGunneryB(gunnery, i);
-                        entity.getCrew().setGunneryM(gunnery, i);
-                    }
-                    entity.getCrew().setPiloting(piloting, i);
+                    entity.getCrew().setGunnery(gunnery, i);
+                    entity.getCrew().setGunneryL(gunnery, i);
+                    entity.getCrew().setGunneryB(gunnery, i);
+                    entity.getCrew().setGunneryM(gunnery, i);
                 }
+                entity.getCrew().setPiloting(piloting, i);
                 if (clientgui.getClient().getGame().getOptions().booleanOption(OptionsConstants.RPG_ARTILLERY_SKILL)) {
                     entity.getCrew().setArtillery(artillery, i);
                 } else {
@@ -1209,7 +1152,7 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
             }
 
             if (isAero) {
-                IAero a = (IAero) entity;
+                Aero a = (Aero) entity;
                 a.setCurrentVelocity(velocity);
                 a.setNextVelocity(velocity);
                 // we need to determine whether this aero is airborne or not in
@@ -1225,22 +1168,26 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                 }
             }
 
-            if (isVTOL || isWiGE || isAirMech || isGlider) {
+            if (isVTOL || isWiGE) {
                 entity.setElevation(height);
             }
             
             //Set the entity's starting mode
             if (isQuadVee) {
-                entity.setConversionMode(choStartingMode.getSelectedIndex());
+                if (choStartingMode.getSelectedIndex() == 1) {
+                    entity.setMovementMode(((QuadVee)entity).getMotiveType() == QuadVee.MOTIVE_WHEEL?
+                            EntityMovementMode.WHEELED : EntityMovementMode.TRACKED);
+                } else {
+                    entity.setMovementMode(EntityMovementMode.QUAD);
+                }
             } else if (isLAM) {
                 if (choStartingMode.getSelectedIndex() == 2) {
-                    entity.setConversionMode(LandAirMech.CONV_MODE_FIGHTER);
+                    entity.setMovementMode(EntityMovementMode.AERODYNE);
                 } else if (choStartingMode.getSelectedIndex() == 1) {
-                    entity.setConversionMode(LandAirMech.CONV_MODE_FIGHTER);
-                    entity.setConversionMode(((LandAirMech)entity).getLAMType() == LandAirMech.LAM_BIMODAL?
-                            LandAirMech.CONV_MODE_FIGHTER : LandAirMech.CONV_MODE_AIRMECH);
+                    entity.setMovementMode(((LandAirMech)entity).getLAMType() == LandAirMech.LAM_BIMODAL?
+                            EntityMovementMode.AERODYNE : EntityMovementMode.AIRMECH);
                 } else {
-                    entity.setConversionMode(LandAirMech.CONV_MODE_MECH);
+                    entity.setMovementMode(EntityMovementMode.BIPED);
                 }
             }
 
@@ -1258,14 +1205,11 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
                 entity.performManualStartup();
             }
 
-            // LAMs in fighter mode or airborne AirMechs ignore the prone and hull down selections.
-            if (!isLAM || (!isAero && entity.getElevation() == 0)) {
-                // Should the entity begin the game prone?
-                entity.setProne(chDeployProne.isSelected());
-    
-                // Should the entity begin the game prone?
-                entity.setHullDown(chDeployHullDown.isSelected());
-            }
+            // Should the entity begin the game prone?
+            entity.setProne(chDeployProne.isSelected());
+
+            // Should the entity begin the game prone?
+            entity.setHullDown(chDeployHullDown.isSelected());
         }
 
         okay = true;
@@ -1324,7 +1268,7 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
 
     public void itemStateChanged(ItemEvent itemEvent) {
         if (itemEvent.getSource().equals(choStartingMode)) {
-            updateStartingModeOptions();
+            chDeployProne.setEnabled(choStartingMode.getSelectedIndex() == 0);
         }
         if (itemEvent.getSource().equals(chDeployProne)) {
             chDeployHullDown.setSelected(false);
@@ -1341,30 +1285,6 @@ public class CustomMechDialog extends ClientDialog implements ActionListener,
             } else {
                 choDeploymentZone.setEnabled(true);
             }
-        }
-    }
-
-    private void updateStartingModeOptions() {
-        final int index = choStartingMode.getSelectedIndex();
-        if (entities.get(0) instanceof QuadVee) {
-            labDeployProne.setEnabled(index == 0);
-            chDeployProne.setEnabled(index == 0);
-        } else if (entities.get(0) instanceof LandAirMech) {
-            int mode = index;
-            if (((LandAirMech)entities.get(0)).getLAMType() == LandAirMech.LAM_BIMODAL
-                    && mode == LandAirMech.CONV_MODE_AIRMECH) {
-                mode = LandAirMech.CONV_MODE_FIGHTER;
-            }
-            labDeployProne.setEnabled(mode < LandAirMech.CONV_MODE_FIGHTER);
-            chDeployProne.setEnabled(mode < LandAirMech.CONV_MODE_FIGHTER);
-            labDeployHullDown.setEnabled(mode == LandAirMech.CONV_MODE_MECH);
-            chDeployHullDown.setEnabled(mode == LandAirMech.CONV_MODE_MECH);
-            labStartHeight.setEnabled(mode == LandAirMech.CONV_MODE_AIRMECH);
-            fldStartHeight.setEnabled(mode == LandAirMech.CONV_MODE_AIRMECH);
-            labStartVelocity.setEnabled(mode == LandAirMech.CONV_MODE_FIGHTER);
-            fldStartVelocity.setEnabled(mode == LandAirMech.CONV_MODE_FIGHTER);
-            labStartAltitude.setEnabled(mode == LandAirMech.CONV_MODE_FIGHTER);
-            fldStartAltitude.setEnabled(mode == LandAirMech.CONV_MODE_FIGHTER);
         }
     }
 

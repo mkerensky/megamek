@@ -14,8 +14,7 @@
 package megamek.client.bot.princess;
 
 import megamek.common.logging.LogLevel;
-import megamek.common.logging.DefaultMmLogger;
-import megamek.common.logging.MMLogger;
+import megamek.common.logging.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -48,9 +47,9 @@ public class BehaviorSettingsFactory {
 
     private static final String PRINCESS_BEHAVIOR_PATH = "mmconf" + File.separator + "princessBehaviors.xml";
 
-    final Map<String, BehaviorSettings> behaviorMap = new HashMap<>();
+    protected final Map<String, BehaviorSettings> behaviorMap = new HashMap<>();
     private static BehaviorSettingsFactory instance = new BehaviorSettingsFactory();
-    private static MMLogger logger = null;
+    private static Logger logger = new Logger();
 
     private BehaviorSettingsFactory() {
         init(true);
@@ -60,22 +59,15 @@ public class BehaviorSettingsFactory {
         return instance;
     }
 
-    public static BehaviorSettingsFactory getInstance(MMLogger logger) {
+    public static BehaviorSettingsFactory getInstance(Logger logger) {
         setLogger(logger);
         return instance;
     }
 
-    private static void setLogger(MMLogger logger) {
+    public static void setLogger(Logger logger) {
         BehaviorSettingsFactory.logger = logger;
     }
 
-    private MMLogger getLogger() {
-        if (null == logger) {
-            logger = DefaultMmLogger.getInstance();
-        }
-        return logger;
-    }
-    
     /**
      * Initializes the {@link megamek.client.bot.princess.BehaviorSettings} cache.  If the cache is empty, it will load from
      * mmconf/princessBehaviors.xml.  Also, if the "DEFAULT behavior is missing, it will be added.
@@ -131,15 +123,11 @@ public class BehaviorSettingsFactory {
         return behaviorMap.get(desc);
     }
 
-    private Document buildPrincessBehaviorDoc() {
-        final String METHOD_NAME = "buildPrincessBehaviorDoc()";
-        
+    protected Document buildPrincessBehaviorDoc() {
         try {
             File behaviorFile = new File(PRINCESS_BEHAVIOR_PATH);
             if (!behaviorFile.exists() || !behaviorFile.isFile()) {
-                getLogger().log(BehaviorSettingsFactory.class,
-                                "buildPrincessBehaviorDoc()",
-                                LogLevel.ERROR,
+                logger.log(BehaviorSettingsFactory.class, "buildPrincessBehaviorDoc()", LogLevel.ERROR,
                         "Could not load " + PRINCESS_BEHAVIOR_PATH);
                 return null;
             }
@@ -147,7 +135,7 @@ public class BehaviorSettingsFactory {
                 return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
             }
         } catch (Exception e) {
-            getLogger().log(getClass(), METHOD_NAME, e);
+            e.printStackTrace();
             return null;
         }
     }
@@ -158,8 +146,7 @@ public class BehaviorSettingsFactory {
      *
      * @return TRUE if the load completes successfully.
      */
-    boolean loadBehaviorSettings(Document princessBehaviorDoc) {
-        final String METHOD_NAME = "loadBehaviorSettings(Document)";
+    protected boolean loadBehaviorSettings(Document princessBehaviorDoc) {
         synchronized (behaviorMap) {
             try {
                 if (princessBehaviorDoc == null) {
@@ -177,7 +164,7 @@ public class BehaviorSettingsFactory {
                 }
                 return true;
             } catch (Exception e) {
-                getLogger().log(getClass(), METHOD_NAME, e);
+                e.printStackTrace();
                 return false;
             } finally {
                 addDefaultBehaviors();
@@ -199,15 +186,13 @@ public class BehaviorSettingsFactory {
             File behaviorFile = new File(PRINCESS_BEHAVIOR_PATH);
             if (!behaviorFile.exists()) {
                 if (!behaviorFile.createNewFile()) {
-                    getLogger().log(BehaviorSettingsFactory.class, METHOD_NAME,
-                                    LogLevel.ERROR,
+                    logger.log(BehaviorSettingsFactory.class, METHOD_NAME, LogLevel.ERROR,
                             "Could not create " + PRINCESS_BEHAVIOR_PATH);
                     return false;
                 }
             }
             if (!behaviorFile.canWrite()) {
-                getLogger().log(BehaviorSettingsFactory.class, METHOD_NAME,
-                                LogLevel.ERROR,
+                logger.log(BehaviorSettingsFactory.class, METHOD_NAME, LogLevel.ERROR,
                         "Could not write to " + PRINCESS_BEHAVIOR_PATH);
                 return false;
             }
@@ -232,7 +217,7 @@ public class BehaviorSettingsFactory {
                 return true;
             }
         } catch (Exception e) {
-            getLogger().log(getClass(), METHOD_NAME, e);
+            e.printStackTrace();
             return false;
         }
     }
@@ -244,7 +229,7 @@ public class BehaviorSettingsFactory {
         init(false);
         List<String> names;
         synchronized (behaviorMap) {
-            names = new ArrayList<>(behaviorMap.keySet());
+            names = new ArrayList<String>(behaviorMap.keySet());
         }
         Collections.sort(names);
         return names.toArray(new String[names.size()]);
@@ -265,10 +250,7 @@ public class BehaviorSettingsFactory {
      * Bravery: 9 <br>
      * Strategic Targets: None
      */
-    // Used by MekHQ
-    @SuppressWarnings("WeakerAccess")
     public final BehaviorSettings BERSERK_BEHAVIOR = buildBerserkBehavior();
-    @SuppressWarnings("WeakerAccess")
     public static final String BERSERK_BEHAVIOR_DESCRIPTION = "BERSERK";
 
     private BehaviorSettings buildBerserkBehavior() {
@@ -286,8 +268,7 @@ public class BehaviorSettingsFactory {
             berserkBehavior.setBraveryIndex(9);
             return berserkBehavior;
         } catch (Exception e) {
-            getLogger().log(BehaviorSettingsFactory.class,
-                            "buildBerserkBehavior", e);
+            logger.log(BehaviorSettingsFactory.class, "buildBerserkBehavior", e);
             return null;
         }
     }
@@ -322,8 +303,7 @@ public class BehaviorSettingsFactory {
             cowardlyBehavior.setBraveryIndex(2);
             return cowardlyBehavior;
         } catch (Exception e) {
-            getLogger().log(BehaviorSettingsFactory.class,
-                            "buildCowardlyBehavior", e);
+            logger.log(BehaviorSettingsFactory.class, "buildCowardlyBehavior", e);
             return null;
         }
     }
@@ -340,10 +320,7 @@ public class BehaviorSettingsFactory {
      * Bravery: 2 <br>
      * Strategic Targets: None
      */
-    // Used by MekHQ
-    @SuppressWarnings("WeakerAccess")
     public final BehaviorSettings ESCAPE_BEHAVIOR = buildEscapeBehavior();
-    @SuppressWarnings("WeakerAccess")
     public static final String ESCAPE_BEHAVIOR_DESCRIPTION = "ESCAPE";
 
     private BehaviorSettings buildEscapeBehavior() {
@@ -361,8 +338,7 @@ public class BehaviorSettingsFactory {
             escapeBehavior.setBraveryIndex(2);
             return escapeBehavior;
         } catch (Exception e) {
-            getLogger().log(BehaviorSettingsFactory.class,
-                            "buildEscapeBehavior", e);
+            logger.log(BehaviorSettingsFactory.class, "buildEscapeBehavior", e);
             return null;
         }
     }
@@ -397,8 +373,7 @@ public class BehaviorSettingsFactory {
             defaultBehavior.setBraveryIndex(5);
             return defaultBehavior;
         } catch (Exception e) {
-            getLogger().log(BehaviorSettingsFactory.class,
-                            "buildDefaultBehavior", e);
+            logger.log(BehaviorSettingsFactory.class, "buildDefaultBehavior", e);
             return null;
         }
     }

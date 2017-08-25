@@ -8,13 +8,14 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.List;
 
+import megamek.common.Aero;
 import megamek.common.Coords;
 import megamek.common.IGame;
 import megamek.common.Infantry;
 import megamek.common.MovePath;
+import megamek.common.Tank;
 import megamek.common.MovePath.MoveStepType;
 import megamek.common.MoveStep;
-import megamek.common.Tank;
 
 /**
  * Path finder that specialises in finding paths that can enter a single hex
@@ -199,7 +200,7 @@ public class LongestPathFinder extends MovePathFinder<Deque<MovePath>> {
          */
         @Override
         public int compare(MovePath mp1, MovePath mp2) {
-            if (!mp1.getEntity().isAero()) {
+            if (!(mp1.getEntity() instanceof Aero)) {
                 throw new IllegalArgumentException("wanted aero got:" + mp1.getClass().toString());
             }
             //we want to process shorter paths first

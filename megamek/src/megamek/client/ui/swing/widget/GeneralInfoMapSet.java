@@ -26,13 +26,13 @@ import javax.swing.JComponent;
 
 import megamek.client.ui.Messages;
 import megamek.client.ui.swing.GUIPreferences;
+import megamek.common.Aero;
 import megamek.common.Configuration;
 import megamek.common.Crew;
 import megamek.common.Entity;
 import megamek.common.EntityMovementMode;
 import megamek.common.EntityMovementType;
 import megamek.common.GunEmplacement;
-import megamek.common.IAero;
 import megamek.common.Infantry;
 import megamek.common.Jumpship;
 import megamek.common.LandAirMech;
@@ -410,25 +410,17 @@ public class GeneralInfoMapSet implements DisplayMapSet {
             mpL4.setVisible(true);
             mpR4.setVisible(true);
             mpR4.setString(Integer.toString(en.getActiveUMUCount()));
-        } else if (en instanceof LandAirMech
-                && en.getMovementMode() == EntityMovementMode.WIGE) {
-            mpL4.setVisible(true);
-            mpR4.setVisible(true);
-            mpR1.setString(Integer.toString(((LandAirMech)en).getAirMechWalkMP()));
-            mpR2.setString(Integer.toString(((LandAirMech)en).getAirMechRunMP()));
-            mpR3.setString(Integer.toString(((LandAirMech)en).getAirMechCruiseMP()));
-            mpR4.setString(Integer.toString(((LandAirMech)en).getAirMechFlankMP()));
         } else {
             mpL4.setVisible(false);
             mpR4.setVisible(false);
         }
 
-        if (en.isAero()) {
-            IAero a = (IAero) en;
+        if (en instanceof Aero) {
+            Aero a = (Aero) en;
             curMoveR.setString(Integer.toString(a.getCurrentVelocity())
                     + Messages.getString("GeneralInfoMapSet.velocity"));
             int currentFuel = a.getFuel();
-            int safeThrust = en.getWalkMP();
+            int safeThrust = a.getWalkMP();
             fuelR.setString(Integer.toString(a.getFuel()));
             if (currentFuel < (5 * safeThrust)) {
                 fuelR.setColor(Color.red);
@@ -475,10 +467,8 @@ public class GeneralInfoMapSet implements DisplayMapSet {
                 || (en instanceof Mech && ((Mech)en).hasTracks())) {
             movementTypeL.setString(Messages.getString("GeneralInfoMapSet.movementModeL"));
             if (en.getMovementMode() == EntityMovementMode.AERODYNE) {
-                //Show "Fighter/AirMech" instead of "Aerodyne/WiGE"
+                //Show "Fighter" instead of "Aerodyne"
                 movementTypeR.setString(Messages.getString("BoardView1.ConversionMode.AERODYNE"));
-            } else if (en.getMovementMode() == EntityMovementMode.WIGE) {
-                movementTypeR.setString(Messages.getString("BoardView1.ConversionMode.WIGE"));
             } else {
                 movementTypeR.setString(Messages.getString("MovementType."
                         + en.getMovementModeAsString()));
@@ -533,9 +523,11 @@ public class GeneralInfoMapSet implements DisplayMapSet {
             curMoveR.setVisible(true);
         }
 
-        if (en.isAero()) {
+        if (en instanceof Aero) {
             heatL.setVisible(true);
             heatR.setVisible(true);
+            mpR3.setVisible(false);
+            mpL3.setVisible(false);
             curMoveL.setVisible(true);
             curMoveR.setVisible(true);
             fuelL.setVisible(true);
@@ -543,47 +535,19 @@ public class GeneralInfoMapSet implements DisplayMapSet {
             mpL0.setString(Messages.getString("GeneralInfoMapSet.thrust"));
             mpL1.setString(Messages.getString("GeneralInfoMapSet.safe"));
             mpL2.setString(Messages.getString("GeneralInfoMapSet.over"));
-            if (en.getMovementMode() == EntityMovementMode.WHEELED) {
-                mpR1.setString(Integer.toString(((IAero)en).getCurrentThrust()));
-                mpR2.setString(Integer.toString((int)Math.ceil(((IAero)en).getCurrentThrust() * 1.5)));
-                mpL3.setString(Messages.getString("GeneralInfoMapSet.vehicle.mpL1"));
-                mpR3.setString(Integer.toString(en.getWalkMP()));
-                mpR3.setVisible(true);
-                mpL3.setVisible(true);
-            } else {
-                mpR3.setVisible(false);
-                mpL3.setVisible(false);
-            }
         } else if (en instanceof Tank
-                || (en instanceof QuadVee && en.getConversionMode() == QuadVee.CONV_MODE_VEHICLE)) {
+                || (en instanceof QuadVee && ((QuadVee)en).isInVehicleMode())) {
             mpL0.setString(Messages.getString("GeneralInfoMapSet.mpL0"));
             mpL1.setString(Messages.getString("GeneralInfoMapSet.vehicle.mpL1"));
             mpL2.setString(Messages.getString("GeneralInfoMapSet.vehicle.mpL2"));
-            fuelL.setVisible(false);
-            fuelR.setVisible(false);
-        } else if (en instanceof LandAirMech
-                && en.getMovementMode() == EntityMovementMode.WIGE) {
-            mpL0.setString(Messages.getString("GeneralInfoMapSet.mpL0"));
-            mpL1.setString(Messages.getString("GeneralInfoMapSet.mpL1"));
-            mpL2.setString(Messages.getString("GeneralInfoMapSet.mpL2"));
-            mpL3.setString(Messages.getString("GeneralInfoMapSet.vehicle.mpL1"));
-            mpL4.setString(Messages.getString("GeneralInfoMapSet.vehicle.mpL2"));
             fuelL.setVisible(false);
             fuelR.setVisible(false);
         } else {
             mpL0.setString(Messages.getString("GeneralInfoMapSet.mpL0"));
             mpL1.setString(Messages.getString("GeneralInfoMapSet.mpL1"));
             mpL2.setString(Messages.getString("GeneralInfoMapSet.mpL2"));
-            mpL3.setString(Messages.getString("GeneralInfoMapSet.mpL3"));
             fuelL.setVisible(false);
             fuelR.setVisible(false);
-            if (en instanceof LandAirMech
-                    && en.getMovementMode() == EntityMovementMode.WIGE) {
-                mpL3.setString(Messages.getString("GeneralInfoMapSet.vehicle.mpL1"));
-                mpL4.setString(Messages.getString("GeneralInfoMapSet.vehicle.mpL2"));
-            } else {
-                mpL3.setString(Messages.getString("GeneralInfoMapSet.mpL3"));
-            }
         }
         if ((en.getGame() != null) && en.getGame().getBoard().inSpace()) {
             elevationL.setVisible(false);

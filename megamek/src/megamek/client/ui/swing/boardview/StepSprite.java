@@ -14,10 +14,10 @@ import java.awt.image.BufferedImage;
 
 import megamek.client.ui.Messages;
 import megamek.client.ui.swing.GUIPreferences;
+import megamek.common.Aero;
 import megamek.common.Entity;
 import megamek.common.EntityMovementMode;
 import megamek.common.EntityMovementType;
-import megamek.common.IAero;
 import megamek.common.MiscType;
 import megamek.common.MovePath.MoveStepType;
 import megamek.common.MoveStep;
@@ -442,13 +442,6 @@ class StepSprite extends Sprite {
             default:
                 break;
         }
-        
-        if (step.isVTOLBombingStep() || step.isStrafingStep()) {
-            graph.setColor(col);
-            ((Graphics2D)graph).fill(
-                    AffineTransform.getTranslateInstance(stepPos.x, stepPos.y).createTransformedShape(
-                    HexDrawUtilities.getHexFullBorderArea(3, 0)));
-        }
 
         baseScaleImage = bv.createImage(tempImage.getSource());
         // create final image
@@ -554,11 +547,11 @@ class StepSprite extends Sprite {
         }
 
         if (!step.getEntity().isAirborne()
-                || !step.getEntity().isAero()) {
+                || !(step.getEntity() instanceof Aero)) {
             return;
         }
 
-        if (((IAero) step.getEntity()).isSpheroid()) {
+        if (((Aero) step.getEntity()).isSpheroid()) {
             return;
         }
 
@@ -661,7 +654,7 @@ class StepSprite extends Sprite {
                     .append("}");
         }
 
-        if (step.getAltitude() > 0) {
+        if (step.getEntity().isAirborne()) {
             costStringBuf.append("{").append(step.getAltitude())
                     .append("}");
         }

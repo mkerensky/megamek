@@ -15,7 +15,7 @@
 package megamek.common;
 
 
-import megamek.common.logging.DefaultMmLogger;
+import megamek.common.logging.Logger;
 
 import java.io.Serializable;
 import java.util.Vector;
@@ -64,7 +64,7 @@ public class GameReports implements Serializable {
         }
         Exception badRound = new RuntimeException(
                 "ERROR: GameReports.get() was asked for reports of a round [" + round + "] which it does not posses.");
-        DefaultMmLogger.getInstance().log(getClass(), "get(int)", badRound);
+        new Logger().log(getClass(), "get(int)", badRound);
         return null;
     }
 

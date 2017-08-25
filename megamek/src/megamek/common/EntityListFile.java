@@ -727,11 +727,11 @@ public class EntityListFile {
             output.write(String.valueOf(entity.getStartingPos(false)));
             output.write("\" neverDeployed=\"");
             output.write(String.valueOf(entity.wasNeverDeployed()));
-            if (entity.isAero()) {
+            if (entity instanceof Aero){
                 output.write("\" velocity=\"");
-                output.write(((IAero)entity).getCurrentVelocity() + "");
+                output.write(((Aero)entity).getCurrentVelocity() + "");
                 output.write("\" altitude=\"");
-                output.write(entity.getAltitude() + "");
+                output.write(((Aero)entity).getAltitude() + "");
             }
             if (!entity.getExternalIdAsString().equals("-1")) {
                 output.write("\" externalId=\"");
@@ -836,53 +836,8 @@ public class EntityListFile {
                 // crits
                 output.write(EntityListFile.getTankCritString(tentity));
             }
-            
-            // Aero stuff that also applies to LAMs
-            if (entity instanceof IAero) {
-                IAero a = (IAero)entity;
-                // fuel
-                output.write(indentStr(indentLvl+1) + "<fuel left=\"");
-                output.write(String.valueOf(a.getFuel()));
-                output.write("\"/>");
-                output.write(CommonConstants.NL);
-            }
 
-                // Write the Bomb Data if needed
-            if (entity.isBomber()) {
-                IBomber b = (IBomber)entity;
-                int[] bombChoices = new int[BombType.B_NUM];
-                bombChoices = b.getBombChoices();
-                if (bombChoices.length > 0) {
-                    output.write(indentStr(indentLvl+1) + "<bombs>");
-                    output.write(CommonConstants.NL);
-                    for (int type = 0; type < BombType.B_NUM; type++) {
-                        String typeName = BombType.getBombInternalName(type);
-                        if (bombChoices[type] > 0) {
-                            output.write(indentStr(indentLvl+2) + "<bomb type=\"");
-                            output.write(typeName);
-                            output.write("\" load=\"");
-                            output.write(String.valueOf(bombChoices[type]));
-                            output.write("\"/>");
-                            output.write(CommonConstants.NL);
-                        }
-                    }
-                    for (Mounted m : b.getBombs()) {
-                        if (!(m.getType() instanceof BombType)) {
-                            continue;
-                        }
-                        output.write(indentStr(indentLvl+2) + "<bomb type=\"");
-                        output.write(m.getType().getShortName());
-                        output.write("\" load=\"");
-                        output.write(String.valueOf(m.getBaseShotsLeft()));
-                        output.write("\"/>");
-                        output.write(CommonConstants.NL);
-                    }
-                    output.write(indentStr(indentLvl+1) + "</bombs>");
-                    output.write(CommonConstants.NL);
-                }
-            }
-
-            // aero stuff that does not apply to LAMs
+            // add a bunch of stuff for aeros
             if (entity instanceof Aero) {
                 Aero a = (Aero) entity;
 
@@ -897,6 +852,44 @@ public class EntityListFile {
                 output.write(String.valueOf(a.getHeatSinks()));
                 output.write("\"/>");
                 output.write(CommonConstants.NL);
+
+                // fuel
+                output.write(indentStr(indentLvl+1) + "<fuel left=\"");
+                output.write(String.valueOf(a.getFuel()));
+                output.write("\"/>");
+                output.write(CommonConstants.NL);
+
+                // Write the Bomb Data if needed
+                int[] bombChoices = new int[BombType.B_NUM];
+                bombChoices = a.getBombChoices();
+                if (bombChoices.length > 0) {
+                    output.write(indentStr(indentLvl+1) + "<bombs>");
+                    output.write(CommonConstants.NL);
+                    for (int type = 0; type < BombType.B_NUM; type++) {
+                        String typeName = BombType.getBombInternalName(type);
+                        if (bombChoices[type] > 0) {
+                            output.write(indentStr(indentLvl+2) + "<bomb type=\"");
+                            output.write(typeName);
+                            output.write("\" load=\"");
+                            output.write(String.valueOf(bombChoices[type]));
+                            output.write("\"/>");
+                            output.write(CommonConstants.NL);
+                        }
+                    }
+                    for (Mounted m : a.getBombs()) {
+                        if (!(m.getType() instanceof BombType)) {
+                            continue;
+                        }
+                        output.write(indentStr(indentLvl+2) + "<bomb type=\"");
+                        output.write(m.getType().getShortName());
+                        output.write("\" load=\"");
+                        output.write(String.valueOf(m.getBaseShotsLeft()));
+                        output.write("\"/>");
+                        output.write(CommonConstants.NL);
+                    }
+                    output.write(indentStr(indentLvl+1) + "</bombs>");
+                    output.write(CommonConstants.NL);
+                }
 
                 // TODO: dropship docking collars, bays
 
@@ -1022,12 +1015,6 @@ public class EntityListFile {
         }
         output.write("\" piloting=\"");
         output.write(String.valueOf(crew.getPiloting(pos)));
-        if (crew instanceof LAMPilot) {
-            writeLAMAeroAttributes(output, (LAMPilot)crew,
-                    (null != entity.getGame())
-                    && entity.getGame().getOptions()
-                    .booleanOption(OptionsConstants.RPG_RPG_GUNNERY));
-        }
         if ((null != entity.getGame())
                 && entity.getGame().getOptions()
                         .booleanOption(OptionsConstants.RPG_ARTILLERY_SKILL)) {
@@ -1057,22 +1044,6 @@ public class EntityListFile {
             output.write(crew.getExternalIdAsString(pos));
         }
     }
-    
-    private static void writeLAMAeroAttributes(Writer output, final LAMPilot crew,
-            boolean rpgGunnery) throws IOException {
-        output.write("\" gunneryAero=\"");
-        output.write(String.valueOf(crew.getGunneryAero()));
-        if (rpgGunnery) {
-            output.write("\" gunneryAeroL=\"");
-            output.write(String.valueOf(crew.getGunneryAeroL()));
-            output.write("\" gunneryAeroM=\"");
-            output.write(String.valueOf(crew.getGunneryAeroM()));
-            output.write("\" gunneryAeroB=\"");
-            output.write(String.valueOf(crew.getGunneryAeroB()));
-        }
-        output.write("\" pilotingAero=\"");
-        output.write(String.valueOf(crew.getPilotingAero()));
-    }    
 
     /**
      * Writes attributes that pertain to entire crew.

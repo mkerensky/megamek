@@ -13,6 +13,7 @@
  */
 package megamek.client.bot.princess;
 
+import megamek.common.Aero;
 import megamek.common.BuildingTarget;
 import megamek.common.Coords;
 import megamek.common.Entity;
@@ -61,7 +62,7 @@ public class EntityState {
             movementType = entity.moved;
             setSecondaryFacing(entity.getSecondaryFacing());
             building = false;
-            aero = target.isAero();
+            aero = (target instanceof Aero);
             airborne = entity.isAirborne() || entity.isAirborneVTOLorWIGE();
             naturalAptGun = entity.getCrew().getOptions().booleanOption(OptionsConstants.PILOT_APTITUDE_GUNNERY);
             naturalAptPilot = entity.getCrew().getOptions().booleanOption(OptionsConstants.PILOT_APTITUDE_PILOTING);

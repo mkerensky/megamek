@@ -11,16 +11,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import megamek.common.Aero;
 import megamek.common.Coords;
 import megamek.common.Entity;
 import megamek.common.EntityMovementType;
 import megamek.common.Facing;
 import megamek.common.IGame;
 import megamek.common.ManeuverType;
-import megamek.common.MovePath;
+import megamek.common.Tank;
 import megamek.common.MovePath.MoveStepType;
 import megamek.common.MoveStep;
-import megamek.common.Tank;
+import megamek.common.MovePath;
 
 /**
  * Generic implementation of AbstractPathFinder when we restrict graph nodes to
@@ -156,7 +157,7 @@ public class MovePathFinder<C> extends AbstractPathFinder<MovePathFinder.CoordsW
 
         @Override
         public boolean shouldStay(MovePath edge) {
-            if (edge.getEntity().isAero()) {
+            if (edge.getEntity() instanceof Aero) {
                 /*
                  * isMovemementPossible is currently not working for aero units,
                  * so we have to use a substitute.
@@ -327,7 +328,7 @@ public class MovePathFinder<C> extends AbstractPathFinder<MovePathFinder.CoordsW
              * if thats the case no more movements are possible and return empty
              * list.
              */
-            if (entity.isAero() &&
+            if (entity instanceof Aero &&
                 (lType == MoveStepType.OFF || lType == MoveStepType.RETURN)) {
                 return result;
             }

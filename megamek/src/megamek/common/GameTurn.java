@@ -339,7 +339,7 @@ public class GameTurn implements Serializable {
             classCode = GameTurn.CLASS_INFANTRY;
         } else if (entity instanceof Protomech) {
             classCode = GameTurn.CLASS_PROTOMECH;
-        } else if (entity instanceof Tank || entity.isAero()) {
+        } else if (entity instanceof Tank || entity instanceof Aero) {
             classCode = GameTurn.CLASS_TANK;
         } else if (entity instanceof Mech) {
             classCode = GameTurn.CLASS_MECH;

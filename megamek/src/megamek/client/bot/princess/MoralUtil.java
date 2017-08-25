@@ -23,7 +23,7 @@ import megamek.common.IPlayer;
 import megamek.common.Infantry;
 import megamek.common.Protomech;
 import megamek.common.logging.LogLevel;
-import megamek.common.logging.MMLogger;
+import megamek.common.logging.Logger;
 
 import java.text.DecimalFormat;
 import java.util.Collections;
@@ -44,9 +44,9 @@ public class MoralUtil implements IMoralUtil {
 
     private final Set<Integer> BROKEN_UNITS = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 
-    private final MMLogger logger;
+    private final Logger logger;
 
-    public MoralUtil(MMLogger logger) {
+    public MoralUtil(Logger logger) {
         this.logger = logger;
     }
 

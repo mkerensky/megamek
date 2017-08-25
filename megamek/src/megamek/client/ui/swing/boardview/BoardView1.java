@@ -121,26 +121,26 @@ import megamek.common.Entity;
 import megamek.common.Flare;
 import megamek.common.IBoard;
 import megamek.common.IGame;
+import megamek.common.Mech;
+import megamek.common.QuadMech;
+import megamek.common.TripodMech;
 import megamek.common.IGame.Phase;
 import megamek.common.IHex;
 import megamek.common.IPlayer;
 import megamek.common.ITerrain;
 import megamek.common.Infantry;
 import megamek.common.LosEffects;
-import megamek.common.Mech;
 import megamek.common.Minefield;
 import megamek.common.Mounted;
 import megamek.common.MovePath;
 import megamek.common.MovePath.MoveStepType;
 import megamek.common.MoveStep;
 import megamek.common.PlanetaryConditions;
-import megamek.common.QuadMech;
 import megamek.common.SpecialHexDisplay;
 import megamek.common.TargetRoll;
 import megamek.common.Targetable;
 import megamek.common.Terrains;
 import megamek.common.ToHitData;
-import megamek.common.TripodMech;
 import megamek.common.UnitLocation;
 import megamek.common.WeaponType;
 import megamek.common.actions.ArtilleryAttackAction;
@@ -307,9 +307,6 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
     // vector of sprites for C3 network lines
     private ArrayList<C3Sprite> c3Sprites = new ArrayList<C3Sprite>();
 
-    // list of sprites for declared VTOL/airmech bombing/strafing targets
-    private ArrayList<VTOLAttackSprite> vtolAttackSprites = new ArrayList<>();
-    
     // vector of sprites for aero flyover lines
     private ArrayList<FlyOverSprite> flyOverSprites = new ArrayList<FlyOverSprite>();
     
@@ -1291,7 +1288,6 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
 
         // draw flyover routes
         if (game.getBoard().onGround()) {
-            drawSprites(g, vtolAttackSprites);
             drawSprites(g, flyOverSprites);
         }
 
@@ -2277,7 +2273,6 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
 
             // draw flyover routes
             if (game.getBoard().onGround()) {
-                drawSprites(boardGraph, vtolAttackSprites);
                 drawSprites(boardGraph, flyOverSprites);
             }
 
@@ -3528,13 +3523,6 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
             addC3Link(entity);
         }
 
-        for (Iterator<VTOLAttackSprite> iter = vtolAttackSprites.iterator(); iter.hasNext();) {
-            final VTOLAttackSprite s = iter.next();
-            if (s.getEntity().getId() == entity.getId()) {
-                iter.remove();
-            }
-        }
-        
         // Remove Flyover Sprites
         Iterator<FlyOverSprite> flyOverIt = flyOverSprites.iterator();
         while (flyOverIt.hasNext()) {
@@ -3545,8 +3533,7 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
         }
         
         // Add Flyover path, if necessary
-        if ((entity.isAirborne() || entity.isMakingVTOLGroundAttack())
-                && (entity.getPassedThrough().size() > 1)) {
+        if (entity.isAirborne() && (entity.getPassedThrough().size() > 1)) {
             addFlyOverPath(entity);
         }
 
@@ -3647,8 +3634,7 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
                 addC3Link(entity);
             }
 
-            if ((entity.isAirborne() || entity.isMakingVTOLGroundAttack())
-                    && (entity.getPassedThrough().size() > 1)) {
+            if (entity.isAirborne() && (entity.getPassedThrough().size() > 1)) {
                 addFlyOverPath(entity);
             }
         }
@@ -4190,9 +4176,6 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
             return;
         }
 
-        if (e.isMakingVTOLGroundAttack()) {
-            vtolAttackSprites.add(new VTOLAttackSprite(this, e));
-        }
         flyOverSprites.add(new FlyOverSprite(this, e));
     }
     
@@ -4413,7 +4396,6 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
     }
 
     public void clearFlyOverPaths() {
-        vtolAttackSprites.clear();
         flyOverSprites.clear();
     }
 
@@ -5194,7 +5176,6 @@ public class BoardView1 extends JPanel implements IBoardView, Scrollable,
         firingSprites.clear();
         attackSprites.clear();
         c3Sprites.clear();
-        vtolAttackSprites.clear();
         flyOverSprites.clear();
         movementSprites.clear();
         fieldofFireSprites.clear();

@@ -16,6 +16,7 @@ package megamek.client.bot.princess;
 import java.util.ArrayList;
 import java.util.Enumeration;
 
+import megamek.common.Aero;
 import megamek.common.Coords;
 import megamek.common.Entity;
 import megamek.common.IGame;
@@ -43,7 +44,7 @@ public class PathSelector {
                 return null;
             }
             Entity entity = paths.get(0).getEntity();
-            if (entity.isAero()) {
+            if (entity instanceof Aero) {
                 for (MovePath p : paths) {
                     // chooses the first path that overflies an enemy
                     for (Enumeration<MoveStep> e = p.getSteps(); e

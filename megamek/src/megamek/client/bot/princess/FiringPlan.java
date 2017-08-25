@@ -23,6 +23,7 @@ import megamek.common.util.StringUtil;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Vector;
 
@@ -121,17 +122,19 @@ public class FiringPlan extends ArrayList<WeaponFireInfo> implements
      *
      * @return The list of actions as a vector.
      */
-    synchronized Vector<EntityAction> getEntityActionVector() {
+    synchronized public Vector<EntityAction> getEntityActionVector() {
         Vector<EntityAction> actionVector = new Vector<>();
         if (size() == 0) {
             return actionVector;
         }
-        
-        if(getTwist() != 0) {
-        	actionVector.add(new TorsoTwistAction(get(0).getShooter().getId(),
-        		FireControl.correctFacing(get(0).getShooter().getFacing() + getTwist())));
+        // todo Consider extended twists.
+        if (getTwist() == -1) {
+            actionVector.add(new TorsoTwistAction(get(0).getShooter().getId(),
+                                                  FireControl.correctFacing(get(0).getShooter().getFacing() - 1)));
+        } else if (getTwist() == +1) {
+            actionVector.add(new TorsoTwistAction(get(0).getShooter().getId(),
+                                                  FireControl.correctFacing(get(0).getShooter().getFacing() + 1)));
         }
-        
         for (WeaponFireInfo weaponFireInfo : this) {
             actionVector.add(weaponFireInfo.getWeaponAttackAction());
         }
@@ -228,8 +231,8 @@ public class FiringPlan extends ArrayList<WeaponFireInfo> implements
     /**
      * Hole punchers before crit seekers
      */
-    void sortPlan() {
-        this.sort(new Comparator<WeaponFireInfo>() {
+    public void sortPlan() {
+        Collections.sort(this, new Comparator<WeaponFireInfo>() {
             @Override
             public int compare(WeaponFireInfo o1, WeaponFireInfo o2) {
                 Mounted weapon1 = o1.getWeapon();
@@ -283,7 +286,7 @@ public class FiringPlan extends ArrayList<WeaponFireInfo> implements
         });
     }
 
-    String getWeaponNames() {
+    public String getWeaponNames() {
         StringBuilder out = new StringBuilder("");
         for (WeaponFireInfo wfi : this) {
             if (!StringUtil.isNullOrEmpty(out)) {

@@ -32,7 +32,6 @@ public class ASEWMissileWeapon extends CapitalMissileWeapon {
         this.techLevel.put(3071, TechConstants.T_IS_ADVANCED);
         this.name = "ASEW Missile";
         this.setInternalName(BombType.getBombWeaponName(BombType.B_ASEW));
-        this.flags = flags.or(F_BOMB_WEAPON);
         this.heat = 0;
         this.damage = 0;
         this.rackSize = 1;

@@ -1662,11 +1662,6 @@ public abstract class Mech extends Entity {
     public int getHeatCapacity() {
         return getHeatCapacity(true, true);
     }
-    
-    @Override
-    public int getHeatCapacity(boolean radicalHeatSink) {
-        return getHeatCapacity(true, radicalHeatSink);
-    }
 
     /**
      * Returns the name of the heat sinks mounted on this 'mech.
@@ -1724,10 +1719,6 @@ public abstract class Mech extends Entity {
                 includePartialWing = false; // Only count the partial wing bonus
                                             // once.
             }
-        }
-        // AirMech mode for LAMs confers the same heat benefits as a partial wing. 
-        if (includePartialWing && movementMode == EntityMovementMode.WIGE) {
-            capacity += getPartialWingHeatBonus();
         }
         if (includeRadicalHeatSink
                 && hasWorkingMisc(MiscType.F_RADICAL_HEATSINK)) {
@@ -1805,11 +1796,6 @@ public abstract class Mech extends Entity {
                 return "Jumped";
             case MOVE_SPRINT:
                 return "Sprinted";
-            //LAM AirMech modes
-            case MOVE_VTOL_WALK:
-                return "Cruised";
-            case MOVE_VTOL_RUN:
-                return "Flanked";
             default:
                 return "Unknown!";
         }
@@ -1833,11 +1819,6 @@ public abstract class Mech extends Entity {
                 return "J";
             case MOVE_SPRINT:
                 return "Sp";
-            //LAM AirMech modes
-            case MOVE_VTOL_WALK:
-                return "C";
-            case MOVE_VTOL_RUN:
-                return "F";
             default:
                 return "?";
         }
@@ -2939,8 +2920,8 @@ public abstract class Mech extends Entity {
     public void addEquipment(Mounted mounted, int loc, boolean rearMounted,
             int critSlot)
             throws LocationFullException {
-        // if there's no actual location or this is a LAM capital fighter weapons group, then don't add criticals
-        if (loc == LOC_NONE || mounted.isWeaponGroup()) {
+        // if there's no actual location, then don't add criticals
+        if (loc == LOC_NONE) {
             super.addEquipment(mounted, loc, rearMounted);
             return;
         }
@@ -5326,8 +5307,7 @@ public abstract class Mech extends Entity {
 
     @Override
     public int getMaxElevationChange() {
-        if (movementMode == EntityMovementMode.TRACKED
-                || movementMode == EntityMovementMode.WIGE) {
+        if (movementMode == EntityMovementMode.TRACKED) {
             return 1;
         }
         return 2;
@@ -8016,35 +7996,14 @@ public abstract class Mech extends Entity {
             toReturn += "Foot";
             first = false;
         }
-        if ((getEntityType() & ETYPE_QUADVEE) != 0
-                && hasSystem(QuadVee.SYSTEM_CONVERSION_GEAR, loc)
+        if (hasSystem(QuadVee.SYSTEM_CONVERSION_GEAR, loc)
                 && (getDamagedCriticals(CriticalSlot.TYPE_SYSTEM,
-                        QuadVee.SYSTEM_CONVERSION_GEAR, loc) > 0)) {
+                        ACTUATOR_FOOT, loc) > 0)) {
             if (!first) {
                 toReturn += ", ";
+                toReturn += "Conversion Gear";
+                first = false;
             }
-            toReturn += "Conversion Gear";
-            first = false;
-        }
-        if ((getEntityType() & ETYPE_LAND_AIR_MECH) != 0
-                && hasSystem(LandAirMech.LAM_AVIONICS, loc)
-                && (getDamagedCriticals(CriticalSlot.TYPE_SYSTEM,
-                        LandAirMech.LAM_AVIONICS, loc) > 0)) {
-            if (!first) {
-                toReturn += ", ";
-            }
-            toReturn += "Avionics";
-            first = false;
-        }
-        if ((getEntityType() & ETYPE_LAND_AIR_MECH) != 0
-                && hasSystem(LandAirMech.LAM_LANDING_GEAR, loc)
-                && (getDamagedCriticals(CriticalSlot.TYPE_SYSTEM,
-                        LandAirMech.LAM_LANDING_GEAR, loc) > 0)) {
-            if (!first) {
-                toReturn += ", ";
-            }
-            toReturn += "Landing Gear";
-            first = false;
         }
         return toReturn;
     }

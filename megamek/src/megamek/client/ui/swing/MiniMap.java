@@ -1305,8 +1305,8 @@ public class MiniMap extends JPanel {
                 } else {
                     form = STRAT_TANKTRACKED;
                 }
-            } else if (entity.isAero()) {
-                if (entity.isFighter()) {
+            } else if (entity instanceof Aero) {
+                if (((Aero) entity).isFighter()) {
                     form = STRAT_AERO;
                 } else {
                     form = STRAT_SPHEROID;
