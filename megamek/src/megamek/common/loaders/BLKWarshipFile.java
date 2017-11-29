@@ -144,6 +144,7 @@ public class BLKWarshipFile extends BLKFile implements IMechLoader {
             throw new EntityLoadingException("Could not find heatsinks block.");
         }
         a.setHeatSinks(dataFile.getDataAsInt("heatsinks")[0]);
+        a.setOHeatSinks(dataFile.getDataAsInt("heatsinks")[0]);
         if (!dataFile.exists("sink_type")) {
             throw new EntityLoadingException("Could not find sink_type block.");
         }
@@ -170,6 +171,9 @@ public class BLKWarshipFile extends BLKFile implements IMechLoader {
             a.setHPG(true);
         }
 
+		if (dataFile.exists("overview")) {
+			a.getFluff().setOverview(dataFile.getDataAsString("overview")[0]);
+		}
         // Grav Decks - two approaches
         // First, the old method, where a number of grav decks for each category is specified
         //  This doesn't allow us to specify precise size
@@ -191,12 +195,15 @@ public class BLKWarshipFile extends BLKFile implements IMechLoader {
             }
         }
 
-        // Armor
+        // Switch older files with standard armor to aerospace
+        int at = EquipmentType.T_ARMOR_AEROSPACE;
         if (dataFile.exists("armor_type")) {
-            a.setArmorType(dataFile.getDataAsInt("armor_type")[0]);
-        } else {
-            a.setArmorType(EquipmentType.T_ARMOR_STANDARD);
+            at = dataFile.getDataAsInt("armor_type")[0];
+            if (at == EquipmentType.T_ARMOR_STANDARD) {
+                at = EquipmentType.T_ARMOR_AEROSPACE;
+            }
         }
+        a.setArmorType(at);
         if (dataFile.exists("armor_tech")) {
             a.setArmorTechLevel(dataFile.getDataAsInt("armor_tech")[0]);
         }
@@ -242,6 +249,7 @@ public class BLKWarshipFile extends BLKFile implements IMechLoader {
         a.initializeArmor(0, Warship.LOC_RBS);
 
         a.autoSetInternal();
+        a.recalculateTechAdvancement();
         a.autoSetThresh();
         a.initializeKFIntegrity();
         a.initializeSailIntegrity();

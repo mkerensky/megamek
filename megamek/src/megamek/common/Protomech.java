@@ -334,6 +334,44 @@ public class Protomech extends Entity {
         }
         return 0;
     }
+    
+    private static final TechAdvancement TA_STANDARD_PROTOMECH = new TechAdvancement(TECH_BASE_CLAN)
+            .setClanAdvancement(3055, 3059, 3060).setClanApproximate(true, false, false)
+            .setPrototypeFactions(F_CSJ).setProductionFactions(F_CSJ)
+            .setTechRating(RATING_F)
+            .setAvailability(RATING_X, RATING_X, RATING_E, RATING_D)
+            .setStaticTechLevel(SimpleTechLevel.STANDARD);
+    private static final TechAdvancement TA_QUAD = new TechAdvancement(TECH_BASE_CLAN)
+            .setClanAdvancement(3075, 3083, 3100).setClanApproximate(false, true, false)
+            .setPrototypeFactions(F_CLAN).setProductionFactions(F_CCC)
+            .setTechRating(RATING_F)
+            .setAvailability(RATING_X, RATING_X, RATING_E, RATING_D)
+            .setStaticTechLevel(SimpleTechLevel.ADVANCED);
+    private static final TechAdvancement TA_ULTRA = new TechAdvancement(TECH_BASE_CLAN)
+            .setClanAdvancement(3075, 3083, 3100).setClanApproximate(false, true, false)
+            .setPrototypeFactions(F_CLAN).setProductionFactions(F_CCY)
+            .setTechRating(RATING_F)
+            .setAvailability(RATING_X, RATING_X, RATING_D, RATING_D)
+            .setStaticTechLevel(SimpleTechLevel.ADVANCED);
+    private static final TechAdvancement TA_GLIDER = new TechAdvancement(TECH_BASE_CLAN)
+            .setClanAdvancement(3075, 3084, 3100).setClanApproximate(false, true, false)
+            .setPrototypeFactions(F_CLAN).setProductionFactions(F_CSR)
+            .setTechRating(RATING_F)
+            .setAvailability(RATING_X, RATING_X, RATING_E, RATING_E)
+            .setStaticTechLevel(SimpleTechLevel.ADVANCED);
+
+    @Override
+    public TechAdvancement getConstructionTechAdvancement() {
+        if (isQuad) {
+            return TA_QUAD;
+        } else if (isGlider) {
+            return TA_GLIDER;
+        } else if (getWeightClass() == EntityWeightClass.WEIGHT_SUPER_HEAVY) {
+            return TA_ULTRA;
+        } else {
+            return TA_STANDARD_PROTOMECH;
+        }
+    }
 
     /**
      * Override Entity#newRound() method.
@@ -875,6 +913,7 @@ public class Protomech extends Entity {
             if (-1 != shots) {
                 mounted.setShotsLeft(shots);
                 mounted.setOriginalShots(shots);
+                mounted.setAmmoCapacity(shots * ((AmmoType) mounted.getType()).getKgPerShot() / 1000);
                 super.addEquipment(mounted, loc, rearMounted);
                 return;
             }
@@ -1082,6 +1121,7 @@ public class Protomech extends Entity {
                         }
                     }
             }
+            addTechComponent(mounted.getType());
         } else {
             super.addEquipment(mounted, loc, rearMounted);
         }
@@ -1348,6 +1388,11 @@ public class Protomech extends Entity {
                         && mLinker.getType().hasFlag(MiscType.F_ARTEMIS)) {
                     dBV *= 1.2;
                     name = name.concat(" with Artemis IV");
+                }
+                if ((mLinker.getType() instanceof MiscType)
+                        && mLinker.getType().hasFlag(MiscType.F_ARTEMIS_PROTO)) {
+                    dBV *= 1.2;
+                    name = name.concat(" with Artemis IV Prototype");
                 }
                 if ((mLinker.getType() instanceof MiscType)
                         && mLinker.getType().hasFlag(MiscType.F_ARTEMIS_V)) {
@@ -2033,8 +2078,10 @@ public class Protomech extends Entity {
         // Additional restrictions for hidden units
         if (isHidden()) {
             // Can't deploy in paved hexes
-            if (hex.containsTerrain(Terrains.PAVEMENT)
-                    || hex.containsTerrain(Terrains.ROAD)) {
+            if ((hex.containsTerrain(Terrains.PAVEMENT)
+                    || hex.containsTerrain(Terrains.ROAD))
+                    && (!hex.containsTerrain(Terrains.BUILDING)
+                            && !hex.containsTerrain(Terrains.RUBBLE))){
                 return true;
             }
             // Can't deploy on a bridge

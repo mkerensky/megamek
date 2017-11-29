@@ -66,7 +66,13 @@ import megamek.server.DedicatedServer;
  */
 public class MegaMek {
 
+<<<<<<< HEAD
     public static String VERSION = "0.43.4-git"; //$NON-NLS-1$
+=======
+    private static final MMLogger logger = DefaultMmLogger.getInstance();
+
+    public static String VERSION = "0.43.5-git"; //$NON-NLS-1$
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
     public static long TIMESTAMP = new File(PreferenceManager
             .getClientPreferences().getLogDirectory()
             + File.separator

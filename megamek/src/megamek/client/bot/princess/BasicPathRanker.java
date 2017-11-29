@@ -44,7 +44,6 @@ import megamek.common.Mech;
 import megamek.common.MechWarrior;
 import megamek.common.MiscType;
 import megamek.common.MovePath;
-import megamek.common.MovePath.MoveStepType;
 import megamek.common.MoveStep;
 import megamek.common.Protomech;
 import megamek.common.QuadMech;
@@ -53,6 +52,7 @@ import megamek.common.TargetRoll;
 import megamek.common.Targetable;
 import megamek.common.Terrains;
 import megamek.common.TripodMech;
+import megamek.common.UnitType;
 import megamek.common.VTOL;
 import megamek.common.logging.LogLevel;
 import megamek.common.options.OptionsConstants;
@@ -197,6 +197,7 @@ public class BasicPathRanker extends PathRanker {
         }
     }
 
+<<<<<<< HEAD
     protected RankedPath doAeroSpecificRanking(MovePath movePath, boolean vtol,
             boolean isSpheroid) {
         // stalling is bad.
@@ -207,17 +208,33 @@ public class BasicPathRanker extends PathRanker {
         if (isSpheroid && (movePath.getFinalNDown() == 0)
                 && (movePath.getMpUsed() == 0)
                 && !movePath.contains(MoveStepType.VLAND)) {
+=======
+    /**
+     * Performs some evaluation of the path specific to aerotech units
+     * @param movePath the path to check
+     * @return A 'RankedPath' object with a certain evaluation
+     */
+    RankedPath doAeroSpecificRanking(MovePath movePath) {
+        // stalling is awful
+    	if(AeroPathUtil.willStall(movePath)) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
             return new RankedPath(-1000d, movePath, "stall");
         }
 
-        // So is crashing.
-        if (movePath.getFinalAltitude() < 1) {
+        // crashing is even worse
+        if (AeroPathUtil.willCrash(movePath)) {
             return new RankedPath(-10000d, movePath, "crash");
         }
 
         // Flying off board should only be done if necessary, but is better than taking a lot of damage.
+<<<<<<< HEAD
         if ((movePath.getLastStep() != null) && (movePath.getLastStep().getType() == MoveStepType.RETURN)) {
             if (vtol) {
+=======
+        // VTOLs really should not be flying off board as they can just stop moving instead
+        if (movePath.fliesOffBoard()) {
+            if (UnitType.isVTOL(movePath.getEntity())) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                 return new RankedPath(-5000d, movePath, "off-board");
             }
             return new RankedPath(-5d, movePath, "off-board");
@@ -297,8 +314,11 @@ public class BasicPathRanker extends PathRanker {
         Entity me = path.getEntity();
 
         // If I don't have range, I can't do damage.
+        // exception: I might, if I'm an aero on a ground map attacking a ground unit because aero unit ranges are a "special case"
+        boolean aeroAttackingGroundUnitOnGroundMap = path.getEntity().isAirborne() && !enemy.isAero() && game.getBoard().onGround();
+        
         int maxRange = me.getMaxWeaponRange();
-        if (distance > maxRange) {
+        if (distance > maxRange && !aeroAttackingGroundUnitOnGroundMap) {
             return 0;
         }
 
@@ -315,7 +335,12 @@ public class BasicPathRanker extends PathRanker {
         }
 
         FiringPlan myFiringPlan;
+<<<<<<< HEAD
         if (path.getEntity() instanceof Aero) {
+=======
+        // we're only going to do air to ground attack plans if we're an airborne aero attacking a ground unit
+        if (aeroAttackingGroundUnitOnGroundMap) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
             myFiringPlan = getFireControl().guessFullAirToGroundPlan(path.getEntity(), enemy,
                                                                      new EntityState(enemy), path, game, false);
         } else {
@@ -451,11 +476,16 @@ public class BasicPathRanker extends PathRanker {
         StringBuilder formula = new StringBuilder("Calculation: {");
 
         try {
+<<<<<<< HEAD
 
             if (movingUnit instanceof Aero || movingUnit instanceof VTOL) {
                 boolean isVTOL = (movingUnit instanceof VTOL);
                 boolean isSpheroid = isVTOL ? false : ((Aero)movingUnit).isSpheroid();
                 RankedPath aeroRankedPath = doAeroSpecificRanking(path, isVTOL, isSpheroid);
+=======
+        	if (movingUnit.isAero() || movingUnit instanceof VTOL) {
+            	RankedPath aeroRankedPath = doAeroSpecificRanking(path);
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                 if (aeroRankedPath != null) {
                     return aeroRankedPath;
                 }
@@ -580,7 +610,9 @@ public class BasicPathRanker extends PathRanker {
             // If I need to flee the board, I want to get closer to my home edge.
             utility -= calculateSelfPreservationMod(movingUnit, pathCopy, game, formula);
 
-            return new RankedPath(utility, pathCopy, formula.toString());
+            RankedPath rankedPath = new RankedPath(utility, pathCopy, formula.toString());
+            rankedPath.setExpectedDamage(maximumDamageDone);
+            return rankedPath;
         } finally {
             getOwner().methodEnd(getClass(), METHOD_NAME);
         }

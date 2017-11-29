@@ -19,8 +19,10 @@
 
 package megamek.common.verifier;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
@@ -32,6 +34,7 @@ import megamek.common.Entity;
 import megamek.common.EntityMovementMode;
 import megamek.common.EquipmentType;
 import megamek.common.GunEmplacement;
+import megamek.common.ITechManager;
 import megamek.common.InfantryBay;
 import megamek.common.MiscType;
 import megamek.common.Mounted;
@@ -43,8 +46,8 @@ import megamek.common.TroopSpace;
 import megamek.common.VTOL;
 import megamek.common.WeaponType;
 import megamek.common.util.StringUtil;
-import megamek.common.weapons.CLChemicalLaserWeapon;
-import megamek.common.weapons.VehicleFlamerWeapon;
+import megamek.common.weapons.flamers.VehicleFlamerWeapon;
+import megamek.common.weapons.lasers.CLChemicalLaserWeapon;
 
 public class TestTank extends TestEntity {
 
@@ -97,6 +100,43 @@ public class TestTank extends TestEntity {
         return armor;
     }
 
+    /**
+     * Filters all vehicle armor according to given tech constraints
+     *
+     * @param noHardened
+     * @param techManager
+     * @return
+     */
+    public static List<EquipmentType> legalArmorsFor(EntityMovementMode movementMode, ITechManager techManager) {
+        List<EquipmentType> retVal = new ArrayList<>();
+        for (int at = 0; at < EquipmentType.armorNames.length; at++) {
+            if ((at == EquipmentType.T_ARMOR_PATCHWORK)
+                    || ((at == EquipmentType.T_ARMOR_HARDENED)
+                            && ((movementMode == EntityMovementMode.VTOL)
+                            || (movementMode == EntityMovementMode.HOVER)
+                            || (movementMode == EntityMovementMode.WIGE)))) {
+                continue;
+            }
+            String name = EquipmentType.getArmorTypeName(at, techManager.useClanTechBase());
+            EquipmentType eq = EquipmentType.get(name);
+            if ((null != eq)
+                    && eq.hasFlag(MiscType.F_TANK_EQUIPMENT)
+                    && techManager.isLegal(eq)) {
+                retVal.add(eq);
+            }
+            if (techManager.useMixedTech()) {
+                name = EquipmentType.getArmorTypeName(at, !techManager.useClanTechBase());
+                EquipmentType eq2 = EquipmentType.get(name);
+                if ((null != eq2) && (eq != eq2)
+                        && eq2.hasFlag(MiscType.F_TANK_EQUIPMENT)
+                        && techManager.isLegal(eq2)) {
+                    retVal.add(eq2);
+                }
+            }
+        }
+        return retVal;
+    }
+    
     @Override
     public Entity getEntity() {
         return tank;
@@ -114,6 +154,16 @@ public class TestTank extends TestEntity {
 
     @Override
     public boolean isAero() {
+        return false;
+    }
+
+    @Override
+    public boolean isSmallCraft() {
+        return false;
+    }
+    
+    @Override
+    public boolean isJumpship() {
         return false;
     }
 
@@ -373,6 +423,9 @@ public class TestTank extends TestEntity {
         if (hasIllegalTechLevels(buff, ammoTechLvl)) {
             correct = false;
         }
+        if (showIncorrectIntroYear() && hasIncorrectIntroYear(buff)) {
+            correct = false;
+        }
         if (hasIllegalEquipmentCombinations(buff)) {
             correct = false;
         }
@@ -434,6 +487,7 @@ public class TestTank extends TestEntity {
         buff.append("Tank: ").append(tank.getDisplayName()).append("\n");
         buff.append("Found in: ").append(fileString).append("\n");
         buff.append(printTechLevel());
+        buff.append("Intro year: ").append(tank.getYear());
         buff.append(printSource());
         buff.append(printShortMovement());
         if (correctWeight(buff, true, true)) {

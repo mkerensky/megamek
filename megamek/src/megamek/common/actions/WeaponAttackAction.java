@@ -70,21 +70,22 @@ import megamek.common.TripodMech;
 import megamek.common.VTOL;
 import megamek.common.WeaponType;
 import megamek.common.options.OptionsConstants;
-import megamek.common.weapons.ArtilleryCannonWeapon;
-import megamek.common.weapons.ArtilleryWeapon;
-import megamek.common.weapons.GaussWeapon;
-import megamek.common.weapons.ISBombastLaser;
-import megamek.common.weapons.ISHGaussRifle;
+import megamek.common.weapons.DiveBombAttack;
 import megamek.common.weapons.InfantryAttack;
-import megamek.common.weapons.LRTWeapon;
-import megamek.common.weapons.LaserBayWeapon;
-import megamek.common.weapons.MekMortarWeapon;
-import megamek.common.weapons.PPCBayWeapon;
-import megamek.common.weapons.PulseLaserBayWeapon;
-import megamek.common.weapons.SRTWeapon;
-import megamek.common.weapons.ScreenLauncherBayWeapon;
-import megamek.common.weapons.TSEMPWeapon;
-import megamek.common.weapons.VariableSpeedPulseLaserWeapon;
+import megamek.common.weapons.artillery.ArtilleryCannonWeapon;
+import megamek.common.weapons.artillery.ArtilleryWeapon;
+import megamek.common.weapons.bayweapons.LaserBayWeapon;
+import megamek.common.weapons.bayweapons.PPCBayWeapon;
+import megamek.common.weapons.bayweapons.PulseLaserBayWeapon;
+import megamek.common.weapons.bayweapons.ScreenLauncherBayWeapon;
+import megamek.common.weapons.gaussrifles.GaussWeapon;
+import megamek.common.weapons.gaussrifles.ISHGaussRifle;
+import megamek.common.weapons.lasers.ISBombastLaser;
+import megamek.common.weapons.lasers.VariableSpeedPulseLaserWeapon;
+import megamek.common.weapons.lrms.LRTWeapon;
+import megamek.common.weapons.mortars.MekMortarWeapon;
+import megamek.common.weapons.other.TSEMPWeapon;
+import megamek.common.weapons.srms.SRTWeapon;
 
 /**
  * Represents intention to fire a weapon at the target.
@@ -294,7 +295,26 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             return new ToHitData(TargetRoll.AUTOMATIC_FAIL, "Not a weapon");
         }
 
+<<<<<<< HEAD
         final WeaponType wtype = (WeaponType) weapon.getType();
+=======
+        // LAMs carrying certain types of bombs that require a weapon have attacks that cannot
+        // be used in mech mode.
+        if ((ae instanceof LandAirMech)
+                && (ae.getConversionMode() == LandAirMech.CONV_MODE_MECH)
+                && wtype.hasFlag(WeaponType.F_BOMB_WEAPON)
+                && wtype.getAmmoType() != AmmoType.T_RL_BOMB
+                && !wtype.hasFlag(WeaponType.F_TAG)) {
+            return (new ToHitData(TargetRoll.AUTOMATIC_FAIL, "Cannot launch bomb in mech mode."));
+        }
+        
+        // ASEW Missiles cannot be launched in an atmosphere
+        if ((wtype.getAmmoType() == AmmoType.T_ASEW_MISSILE)
+                && !game.getBoard().inSpace()) {
+            return (new ToHitData(TargetRoll.AUTOMATIC_FAIL, "Cannot launch ASEW missile in an atmosphere."));
+        }
+        
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
         Targetable swarmSecondaryTarget = target;
         Targetable swarmPrimaryTarget = oldTarget;
         if (exchangeSwarmTarget) {
@@ -312,59 +332,105 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             te = (Entity) target;
         }
         boolean isAttackerInfantry = ae instanceof Infantry;
+        
         boolean isWeaponInfantry = wtype.hasFlag(WeaponType.F_INFANTRY);
+        
         boolean isWeaponFieldGuns = isAttackerInfantry && (weapon.getLocation() == Infantry.LOC_FIELD_GUNS);
         // 2003-01-02 BattleArmor MG and Small Lasers have unlimited ammo.
         // 2002-09-16 Infantry weapons have unlimited ammo.
+        
         final boolean usesAmmo = (wtype.getAmmoType() != AmmoType.T_NA) && !isWeaponInfantry;
+        
         final Mounted ammo = usesAmmo ? weapon.getLinked() : null;
+        
         final AmmoType atype = ammo == null ? null : (AmmoType) ammo.getType();
+        
         final boolean targetInBuilding = Compute.isInBuilding(game, te);
+        
         boolean bMekTankStealthActive = false;
         if ((ae instanceof Mech) || (ae instanceof Tank)) {
             bMekTankStealthActive = ae.isStealthActive();
         }
         boolean isIndirect = (wtype.hasModes() && weapon.curMode().equals("Indirect"));
+        
         boolean isInferno = ((atype != null)
-                && ((atype.getAmmoType() == AmmoType.T_SRM) || (atype.getAmmoType() == AmmoType.T_MML))
+                && ((atype.getAmmoType() == AmmoType.T_SRM)
+                        || (atype.getAmmoType() == AmmoType.T_SRM_IMP)
+                        || (atype.getAmmoType() == AmmoType.T_MML))
                 && (atype.getMunitionType() == AmmoType.M_INFERNO))
                 || (isWeaponInfantry && (wtype.hasFlag(WeaponType.F_INFERNO)));
+        
         boolean isArtilleryDirect = wtype.hasFlag(WeaponType.F_ARTILLERY)
                 && (game.getPhase() == IGame.Phase.PHASE_FIRING);
+        
         boolean isArtilleryIndirect = wtype.hasFlag(WeaponType.F_ARTILLERY)
                 && ((game.getPhase() == IGame.Phase.PHASE_TARGETING)
                         || (game.getPhase() == IGame.Phase.PHASE_OFFBOARD));
+        
         // hack, otherwise when actually resolves shot labeled impossible.
         boolean isArtilleryFLAK = isArtilleryDirect && (te != null)
                 && ((((te.getMovementMode() == EntityMovementMode.VTOL)
                         || (te.getMovementMode() == EntityMovementMode.WIGE)) && te.isAirborneVTOLorWIGE())
                         || (te.isAirborne()))
                 && (atype != null) && (usesAmmo && (atype.getMunitionType() == AmmoType.M_STANDARD));
+        
         boolean isHaywireINarced = ae.isINarcedWith(INarcPod.HAYWIRE);
+        
         boolean isINarcGuided = false;
         // for attacks where ECM along flight path makes a difference
+        
         boolean isECMAffected = ComputeECM.isAffectedByECM(ae, ae.getPosition(), target.getPosition(), allECMInfo);
         // for attacks where only ECM on the target hex makes a difference
+        
         boolean isTargetECMAffected = ComputeECM.isAffectedByECM(ae, target.getPosition(), target.getPosition(),
                 allECMInfo);
+        
         boolean isTAG = wtype.hasFlag(WeaponType.F_TAG);
+        
         boolean isHoming = false;
+        
         boolean bHeatSeeking = (atype != null)
-                && ((atype.getAmmoType() == AmmoType.T_SRM) || (atype.getAmmoType() == AmmoType.T_MML)
-                        || (atype.getAmmoType() == AmmoType.T_LRM))
+                && ((atype.getAmmoType() == AmmoType.T_SRM)
+                        || (atype.getAmmoType() == AmmoType.T_SRM_IMP)
+                        || (atype.getAmmoType() == AmmoType.T_MML)
+                        || (atype.getAmmoType() == AmmoType.T_LRM)
+                        || (atype.getAmmoType() == AmmoType.T_LRM_IMP))
                 && (atype.getMunitionType() == AmmoType.M_HEAT_SEEKING);
+        
         boolean bFTL = (atype != null)
-                && ((atype.getAmmoType() == AmmoType.T_MML) || (atype.getAmmoType() == AmmoType.T_LRM))
+                && ((atype.getAmmoType() == AmmoType.T_MML) 
+                        || (atype.getAmmoType() == AmmoType.T_LRM)
+                        || (atype.getAmmoType() == AmmoType.T_LRM_IMP))
                 && (atype.getMunitionType() == AmmoType.M_FOLLOW_THE_LEADER);
 
         Mounted mLinker = weapon.getLinkedBy();
+               
         boolean bApollo = ((mLinker != null) && (mLinker.getType() instanceof MiscType) && !mLinker.isDestroyed()
                 && !mLinker.isMissing() && !mLinker.isBreached() && mLinker.getType().hasFlag(MiscType.F_APOLLO))
                 && (atype != null) && (atype.getAmmoType() == AmmoType.T_MRM);
+        
         boolean bArtemisV = ((mLinker != null) && (mLinker.getType() instanceof MiscType) && !mLinker.isDestroyed()
                 && !mLinker.isMissing() && !mLinker.isBreached() && mLinker.getType().hasFlag(MiscType.F_ARTEMIS_V)
                 && !isECMAffected && !bMekTankStealthActive && (atype != null)
                 && (atype.getMunitionType() == AmmoType.M_ARTEMIS_V_CAPABLE));
+        
+        if (ae.usesWeaponBays()) {
+            for (int wId : weapon.getBayWeapons()) {
+                Mounted bayW = ae.getEquipment(wId);
+                Mounted bayWAmmo = bayW.getLinked();
+                AmmoType bAmmo = bayWAmmo != null ? (AmmoType) bayWAmmo.getType() : null;
+                mLinker = bayW.getLinkedBy();
+                bApollo = ((mLinker != null) && (mLinker.getType() instanceof MiscType) && !mLinker.isDestroyed()
+                        && !mLinker.isMissing() && !mLinker.isBreached() && mLinker.getType().hasFlag(MiscType.F_APOLLO))
+                        && (bAmmo != null) && (bAmmo.getAmmoType() == AmmoType.T_MRM);
+                
+                bArtemisV = ((mLinker != null) && (mLinker.getType() instanceof MiscType) && !mLinker.isDestroyed()
+                        && !mLinker.isMissing() && !mLinker.isBreached() && mLinker.getType().hasFlag(MiscType.F_ARTEMIS_V)
+                        && !isECMAffected && !bMekTankStealthActive && (atype != null)
+                        && (bAmmo != null) && (bAmmo.getMunitionType() == AmmoType.M_ARTEMIS_V_CAPABLE));
+            }
+        }
+        
         boolean inSameBuilding = Compute.isInSameBuilding(game, ae, te);
 
         // is this attack originating from underwater
@@ -376,8 +442,12 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
 
         if (te != null) {
             if (!isTargetECMAffected && te.isINarcedBy(ae.getOwner().getTeam()) && (atype != null)
-                    && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML)
-                            || (atype.getAmmoType() == AmmoType.T_SRM) || (atype.getAmmoType() == AmmoType.T_NLRM))
+                    && ((atype.getAmmoType() == AmmoType.T_LRM)
+                            || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                            || (atype.getAmmoType() == AmmoType.T_MML)
+                            || (atype.getAmmoType() == AmmoType.T_SRM)
+                            || (atype.getAmmoType() == AmmoType.T_SRM_IMP) 
+                            || (atype.getAmmoType() == AmmoType.T_NLRM))
                     && (atype.getMunitionType() == AmmoType.M_NARC_CAPABLE)) {
                 isINarcGuided = true;
             }
@@ -443,7 +513,9 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
                 spotter = Compute.findSpotter(game, ae, target);
             }
             if ((spotter == null) && (atype != null)
-                    && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML)
+                    && ((atype.getAmmoType() == AmmoType.T_LRM)
+                            || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                            || (atype.getAmmoType() == AmmoType.T_MML)
                             || (atype.getAmmoType() == AmmoType.T_NLRM)
                             || (atype.getAmmoType() == AmmoType.T_MEK_MORTAR))
                     && (atype.getMunitionType() == AmmoType.M_SEMIGUIDED)) {
@@ -463,13 +535,17 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         int eistatus = 0;
 
         boolean mpMelevationHack = false;
-        if (usesAmmo && (wtype.getAmmoType() == AmmoType.T_LRM) && (atype != null)
-                && (atype.getMunitionType() == AmmoType.M_MULTI_PURPOSE) && (ae.getElevation() == -1)
+        if (usesAmmo 
+                && ((wtype.getAmmoType() == AmmoType.T_LRM) || (wtype.getAmmoType() == AmmoType.T_LRM_IMP))  
+                && (atype != null)
+                && (atype.getMunitionType() == AmmoType.M_MULTI_PURPOSE) 
+                && (ae.getElevation() == -1)
                 && (ae.getLocationStatus(weapon.getLocation()) == ILocationExposureStatus.WET)) {
             mpMelevationHack = true;
             // surface to fire
             ae.setElevation(0);
         }
+        
         // check LOS (indirect LOS is from the spotter)
         LosEffects los;
         ToHitData losMods;
@@ -500,11 +576,15 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             }
 
             losMods = los.losModifiers(game, eistatus, underWater);
-            if ((atype != null) && ((atype.getAmmoType() == AmmoType.T_LRM_TORPEDO)
-                    || (atype.getAmmoType() == AmmoType.T_SRM_TORPEDO)
-                    || (((atype.getAmmoType() == AmmoType.T_SRM) || (atype.getAmmoType() == AmmoType.T_MRM)
-                            || (atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML))
-                            && (munition == AmmoType.M_TORPEDO)))
+            if ((atype != null)
+                    && ((atype.getAmmoType() == AmmoType.T_LRM_TORPEDO)
+                            || (atype.getAmmoType() == AmmoType.T_SRM_TORPEDO)
+                            || (((atype.getAmmoType() == AmmoType.T_SRM)
+                                    || (atype.getAmmoType() == AmmoType.T_SRM_IMP)
+                                    || (atype.getAmmoType() == AmmoType.T_MRM)
+                                    || (atype.getAmmoType() == AmmoType.T_LRM)
+                                    || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                                    || (atype.getAmmoType() == AmmoType.T_MML)) && (munition == AmmoType.M_TORPEDO)))
                     && (los.getMinimumWaterDepth() < 1)) {
                 return new ToHitData(TargetRoll.IMPOSSIBLE, "Torpedos must follow water their entire LOS");
             }
@@ -646,7 +726,7 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             toHit = new ToHitData(ae.getCrew().getGunnery(), "gunnery skill");
             if (game.getOptions().booleanOption(OptionsConstants.RPG_RPG_GUNNERY)) {
                 if (wtype.hasFlag(WeaponType.F_ENERGY)) {
-                    toHit = new ToHitData(ae.getCrew().getGunneryL(), "gunnery (L) skill");
+                    toHit = new ToHitData(ae.getCrew().getGunneryL(), "gunnery (E) skill");
                 }
                 if (wtype.hasFlag(WeaponType.F_MISSILE)) {
                     toHit = new ToHitData(ae.getCrew().getGunneryM(), "gunnery (M) skill");
@@ -702,6 +782,31 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         if (ae.isSufferingEMI()) {
             toHit.addModifier(+2, "electromagnetic interference");
         }
+        
+        //ASEW Missiles
+        // +4 for trying to fire one at a target of < 500 tons
+        if (wtype.getAmmoType() == AmmoType.T_ASEW_MISSILE && te.getWeight() < 500.0) {
+            toHit.addModifier(4, "target is less than 500 tons");
+        }
+        // +4 attack penalty for ASEW affected locations
+        if (ae instanceof Dropship) {
+            Dropship d = (Dropship) ae;
+            int loc = weapon.getLocation();
+            if (d.getASEWAffected(loc) > 0) {
+                toHit.addModifier(4, "weapon arc affected by ASEW missile");
+            }            
+        } else if (ae instanceof Jumpship) {
+            Jumpship j = (Jumpship) ae;
+            int loc = weapon.getLocation();
+            if (j.getASEWAffected(loc) > 0) {
+                toHit.addModifier(4, "weapon arc affected by ASEW missile");
+            } 
+        } else {
+            if (ae.getASEWAffected() > 0) {
+                toHit.addModifier(4, "attacker affected by ASEW missile");
+            }
+        }
+            
 
         // evading bonuses (
         if ((te != null) && te.isEvading()) {
@@ -983,8 +1088,13 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
                     }
                 }
                 for (Entity en : game.getEntitiesVector(target.getPosition())) {
+<<<<<<< HEAD
                     if (!en.isEnemyOf(a) && en.isLargeCraft() && !en.equals(a)
                             && ((en.getWeight() - a.getWeight()) >= -100000.0)) {
+=======
+                    if (!en.isEnemyOf(te) && en.isLargeCraft() && !en.equals((Entity) a)
+                            && ((en.getWeight() - te.getWeight()) >= -100000.0)) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                         toHit.addModifier(+1, "Sensor Shadow");
                         break;
                     }
@@ -1055,6 +1165,14 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         if (weapon.hasQuirk(OptionsConstants.QUIRK_WEAP_POS_STABLE_WEAPON) && (ae.moved == EntityMovementType.MOVE_RUN)) {
             toHit.addModifier(-1, "stabilized weapon");
         }
+        
+        if (weapon.hasQuirk(OptionsConstants.QUIRK_WEAP_NEG_MISREPAIRED)) {
+            toHit.addModifier(+1, "misrepaired weapon");
+        }
+        
+        if (weapon.hasQuirk(OptionsConstants.QUIRK_WEAP_NEG_MISREPLACED)) {
+            toHit.addModifier(+1, "misreplaced weapon");
+        }
 
         // Has the pilot the appropriate gunnery skill?
         if (ae.getCrew().getOptions().booleanOption(OptionsConstants.UNOFF_GUNNERY_LASER)
@@ -1114,11 +1232,23 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
                             || game.getBoard().getHex(te.getPosition()).containsTerrain(Terrains.RUBBLE)
                             || game.getBoard().getHex(te.getPosition()).containsTerrain(Terrains.BUILDING)
                             || game.getBoard().getHex(te.getPosition()).containsTerrain(Terrains.ROUGH))) {
-                toHit.addModifier(+1, "urban guerrilla");
+                toHit.addModifier(+1, "Urban Guerrilla");
             }
             if (te.getCrew().getOptions().booleanOption(OptionsConstants.PILOT_SHAKY_STICK) && te.isAirborne()
                     && (!ae.isAirborne() || !ae.isAirborneVTOLorWIGE())) {
                 toHit.addModifier(+1, OptionsConstants.PILOT_SHAKY_STICK);
+            }
+            if (te.getCrew().getOptions().booleanOption(OptionsConstants.PILOT_TM_FOREST_RANGER)
+                    && (game.getBoard().getHex(te.getPosition()).containsTerrain(Terrains.WOODS)
+                       || game.getBoard().getHex(te.getPosition()).containsTerrain(Terrains.JUNGLE))
+                    && te.moved == EntityMovementType.MOVE_WALK) {
+                toHit.addModifier(+1, "Forest Ranger");
+            }
+            if (te.getCrew().getOptions().booleanOption(OptionsConstants.PILOT_TM_SWAMP_BEAST)
+                    && (game.getBoard().getHex(te.getPosition()).containsTerrain(Terrains.MUD)
+                        || game.getBoard().getHex(te.getPosition()).containsTerrain(Terrains.SWAMP))
+                    && te.moved == EntityMovementType.MOVE_RUN) {
+                toHit.addModifier(+1, "Swamp Beast");
             }
         }
 
@@ -1188,8 +1318,11 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
 
         // Do we use Listen-Kill ammo from War of 3039 sourcebook?
         if (!isECMAffected && (atype != null)
-                && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML)
-                        || (atype.getAmmoType() == AmmoType.T_SRM))
+                && ((atype.getAmmoType() == AmmoType.T_LRM) 
+                        || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                        || (atype.getAmmoType() == AmmoType.T_MML)
+                        || (atype.getAmmoType() == AmmoType.T_SRM)
+                        || (atype.getAmmoType() == AmmoType.T_SRM_IMP))
                 && (atype.getMunitionType() == AmmoType.M_LISTEN_KILL) && !((te != null) && te.isClan())) {
             toHit.addModifier(-1, "Listen-Kill ammo");
         }
@@ -1307,6 +1440,7 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
                         atype.getSubMunitionName()
                                 + " ammunition to-hit modifier");
             }
+            
             if (isHoming) {
                 return new ToHitData(4, "Homing shot");
             }
@@ -1481,8 +1615,11 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             toSubtract += thTemp.getValue();
 
             // semiguided ammo negates this modifier, if TAG succeeded
-            if ((atype != null) && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML)
-                    || (atype.getAmmoType() == AmmoType.T_NLRM) || (atype.getAmmoType() == AmmoType.T_MEK_MORTAR))
+            if ((atype != null) && ((atype.getAmmoType() == AmmoType.T_LRM) 
+                    || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                    || (atype.getAmmoType() == AmmoType.T_MML)
+                    || (atype.getAmmoType() == AmmoType.T_NLRM) 
+                    || (atype.getAmmoType() == AmmoType.T_MEK_MORTAR))
                     && (atype.getMunitionType() == AmmoType.M_SEMIGUIDED) && (te.getTaggedBy() != -1)) {
                 int nAdjust = thTemp.getValue();
                 if (nAdjust > 0) {
@@ -1491,7 +1628,10 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             }
             // precision ammo reduces this modifier
             else if ((atype != null)
-                    && ((atype.getAmmoType() == AmmoType.T_AC) || (atype.getAmmoType() == AmmoType.T_LAC))
+                    && ((atype.getAmmoType() == AmmoType.T_AC) 
+                            || (atype.getAmmoType() == AmmoType.T_LAC)
+                            || (atype.getAmmoType() == AmmoType.T_AC_IMP)
+                            || (atype.getAmmoType() == AmmoType.T_PAC))
                     && (atype.getMunitionType() == AmmoType.M_PRECISION)) {
                 int nAdjust = Math.min(2, thTemp.getValue());
                 if (nAdjust > 0) {
@@ -1504,7 +1644,11 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         }
 
         // Armor Piercing ammo is a flat +1
-        if ((atype != null) && ((atype.getAmmoType() == AmmoType.T_AC) || (atype.getAmmoType() == AmmoType.T_LAC))
+        if ((atype != null)
+                && ((atype.getAmmoType() == AmmoType.T_AC) 
+                        || (atype.getAmmoType() == AmmoType.T_LAC)
+                        || (atype.getAmmoType() == AmmoType.T_AC_IMP)
+                        || (atype.getAmmoType() == AmmoType.T_PAC))
                 && (atype.getMunitionType() == AmmoType.M_ARMOR_PIERCING)) {
             toHit.addModifier(1, "Armor-Piercing Ammo");
         }
@@ -1512,8 +1656,11 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         // spotter movement, if applicable
         if (isIndirect) {
             // semiguided ammo negates this modifier, if TAG succeeded
-            if ((atype != null) && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML)
-                    || (atype.getAmmoType() == AmmoType.T_NLRM) || (atype.getAmmoType() == AmmoType.T_MEK_MORTAR))
+            if ((atype != null) && ((atype.getAmmoType() == AmmoType.T_LRM)
+                    || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                    || (atype.getAmmoType() == AmmoType.T_MML)
+                    || (atype.getAmmoType() == AmmoType.T_NLRM) 
+                    || (atype.getAmmoType() == AmmoType.T_MEK_MORTAR))
                     && (atype.getMunitionType() == AmmoType.M_SEMIGUIDED)) {
                 boolean targetTagged = false;
                 // If this is an entity, we can see if it's tagged
@@ -2279,8 +2426,13 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
                     }
                 }
                 for (Entity en : game.getEntitiesVector(target.getPosition())) {
+<<<<<<< HEAD
                     if (!en.isEnemyOf(a) && en.isLargeCraft() && !en.equals(a)
                             && ((en.getWeight() - a.getWeight()) >= -100000.0)) {
+=======
+                    if (!en.isEnemyOf((Entity)a) && en.isLargeCraft() && !en.equals((Entity) a)
+                            && ((en.getWeight() - ((Entity)a).getWeight()) >= -100000.0)) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                         toHit.addModifier(+1, "Sensor Shadow");
                         break;
                     }
@@ -2818,7 +2970,9 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             return "Weapon can't deliver minefields";
         }
         if ((target.getTargetType() == Targetable.TYPE_FLARE_DELIVER) && !(usesAmmo
-                && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML)
+                && ((atype.getAmmoType() == AmmoType.T_LRM) 
+                        || (atype.getAmmoType() == AmmoType.T_MML)
+                        || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
                         || (atype.getAmmoType() == AmmoType.T_MEK_MORTAR))
                 && (atype.getMunitionType() == AmmoType.M_FLARE))) {
             return "Weapon can't deliver flares";
@@ -2849,7 +3003,9 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         }
 
         if ((atype != null)
-                && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML)
+                && ((atype.getAmmoType() == AmmoType.T_LRM) 
+                        || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                        || (atype.getAmmoType() == AmmoType.T_MML)
                         || (atype.getAmmoType() == AmmoType.T_MEK_MORTAR))
                 && ((atype.getMunitionType() == AmmoType.M_THUNDER)
                         || (atype.getMunitionType() == AmmoType.M_THUNDER_ACTIVE)
@@ -2859,7 +3015,9 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
                 && (target.getTargetType() != Targetable.TYPE_MINEFIELD_DELIVER)) {
             return "Weapon can only deliver minefields";
         }
-        if ((atype != null) && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML))
+        if ((atype != null) && ((atype.getAmmoType() == AmmoType.T_LRM)
+                || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                || (atype.getAmmoType() == AmmoType.T_MML))
                 && (atype.getMunitionType() == AmmoType.M_FLARE)
                 && (target.getTargetType() != Targetable.TYPE_FLARE_DELIVER)) {
             return "Weapon can only deliver flares";
@@ -2899,8 +3057,25 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             if (ae.isAirborne()) {
                 if (isArtilleryDirect) {
                     return "Airborne aerospace units can't make direct-fire artillery attacks";
-                } else if (isArtilleryIndirect && (wtype.getAmmoType() != AmmoType.T_ARROW_IV)) {
-                    return "Airborne aerospace units can't fire non-Arrow-IV artillery.";
+                } else if (isArtilleryIndirect) {
+                    if (ae.getAltitude() > 9) {
+                        return "Airborne aerospace units can't make artillery attacks from above Altitude 9.";
+                    }
+                    if (ae.usesWeaponBays()) {
+                        //For Dropships
+                        for (int wId : weapon.getBayWeapons()) {
+                            Mounted bayW = ae.getEquipment(wId);
+                            // check the loaded ammo for the Arrow IV flag
+                            Mounted bayWAmmo = bayW.getLinked();
+                            AmmoType bAType = (AmmoType) bayWAmmo.getType();
+                            if (bAType.getAmmoType() != AmmoType.T_ARROW_IV) {
+                                return "Airborne aerospace units can't fire non-Arrow-IV artillery.";
+                            }
+                        }
+                    } else if (wtype.getAmmoType() != AmmoType.T_ARROW_IV) {
+                        //For Fighters, LAMs, Small Craft and VTOLs
+                        return "Airborne aerospace units can't make non-Arrow-IV artillery attacks.";
+                    }
                 }
             }
         } else {
@@ -3063,6 +3238,13 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         }
         if (wtype.hasModes() && weapon.curMode().equals("Bracket 40%") && (weapon.getBayWeapons().size() < 4)) {
             return "not enough weapons to bracket at this level";
+        }
+        
+        // If you're an aero, can't fire an AMS Bay or a Point Defense bay in PD Mode
+        if (wtype.hasFlag(WeaponType.F_AMSBAY)) {
+            return "Auto-firing weapon";
+        } else if (wtype.hasModes() && weapon.curMode().equals("Point Defense")) {
+            return "Weapon in Point Defense Mode";
         }
 
         // Is the weapon blocked by a passenger?
@@ -3459,15 +3641,23 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             }
 
             if (wtype.hasFlag(WeaponType.F_DIVE_BOMB)) {
-                if (ae.getAltitude() > 5) {
+                if (ae.getAltitude() > DiveBombAttack.DIVE_BOMB_MAX_ALTITUDE) {
                     return "no dive bombing above altitude 5";
                 }
+<<<<<<< HEAD
                 int altLoss = 0;
                 if (ae instanceof Aero) {
                     altLoss = ((Aero) ae).getAltLossThisRound();
                 }
                 if ((ae.getAltitude() + altLoss) < 3) {
                     return "no dive bombing below altitude 3";
+=======
+                if (ae.isAero()) {
+                    int altLoss = ((IAero) ae).getAltLossThisRound();
+                    if ((ae.getAltitude() + altLoss) < DiveBombAttack.DIVE_BOMB_MIN_ALTITUDE) {
+                        return "no dive bombing below altitude 3";
+                    }
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                 }
             }
         }
@@ -3483,7 +3673,9 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
             }
 
             if ((spotter == null) && (atype != null)
-                    && ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_MML)
+                    && ((atype.getAmmoType() == AmmoType.T_LRM) 
+                            || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                            || (atype.getAmmoType() == AmmoType.T_MML)
                             || (atype.getAmmoType() == AmmoType.T_NLRM)
                             || (atype.getAmmoType() == AmmoType.T_MEK_MORTAR))
                     && (atype.getMunitionType() == AmmoType.M_SEMIGUIDED)) {
@@ -3503,7 +3695,9 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         int eistatus = 0;
 
         boolean multiPurposeelevationHack = false;
-        if (usesAmmo && (wtype.getAmmoType() == AmmoType.T_LRM) && (atype.getMunitionType() == AmmoType.M_MULTI_PURPOSE)
+        if (usesAmmo 
+                && ((wtype.getAmmoType() == AmmoType.T_LRM) || (wtype.getAmmoType() == AmmoType.T_LRM_IMP)) 
+                && (atype.getMunitionType() == AmmoType.M_MULTI_PURPOSE)
                 && (ae.getElevation() == -1)
                 && (ae.getLocationStatus(weapon.getLocation()) == ILocationExposureStatus.WET)) {
             multiPurposeelevationHack = true;
@@ -3811,7 +4005,8 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
                     && !((wtype instanceof ArtilleryWeapon) || wtype.hasFlag(WeaponType.F_ARTILLERY))) {
                 return "Target is too low for nose weapons";
             }
-            if ((!weapon.isRearMounted() && (weapon.getLocation() != Aero.LOC_AFT)) && (altDif < 0)) {
+            if ((!weapon.isRearMounted() && (weapon.getLocation() != Aero.LOC_AFT)) && (altDif < 0)
+                    && !((wtype instanceof ArtilleryWeapon) || wtype.hasFlag(WeaponType.F_ARTILLERY))) {
                 return "Target is too low for front-side weapons";
             }
             if ((weapon.getLocation() == Aero.LOC_AFT)) {
@@ -4121,6 +4316,11 @@ public class WeaponAttackAction extends AbstractAttackAction implements Serializ
         return bombPayload;
     }
 
+    /**
+     * 
+     * @param load This is the "bomb payload". It's an array indexed by the constants declared in BombType.
+     * Each element indicates how many types of that bomb should be fired.
+     */
     public void setBombPayload(int[] load) {
         bombPayload = load;
     }

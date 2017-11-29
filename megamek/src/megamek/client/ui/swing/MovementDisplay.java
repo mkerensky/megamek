@@ -995,6 +995,7 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
         clientgui.getBoardView().selectEntity(null);
         clientgui.setSelectedEntityNum(Entity.NONE);
         clientgui.bv.clearMovementData();
+        clientgui.bv.clearFieldofF();
     }
 
     /**
@@ -1185,6 +1186,8 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
                                 + "</b></html>"); //$NON-NLS-1$
             }
         }
+        
+        updateButtons();
     }
 
     /**
@@ -2039,8 +2042,16 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
                                          cmd.getFinalCoords()));
             return;
         }
-        setRaiseEnabled(ce.canGoUp(cmd.getFinalElevation(),
-                                   cmd.getFinalCoords()));
+        // WiGEs (and LAMs and glider protomechs) cannot go up if they've used ground movement.
+        if ((ce.getMovementMode() == EntityMovementMode.WIGE)
+                && !ce.isAirborneVTOLorWIGE()
+                && (cmd.getMpUsed() > 0)
+                && !cmd.contains(MoveStepType.UP)) {
+            setRaiseEnabled(false);
+        } else {
+            setRaiseEnabled(ce.canGoUp(cmd.getFinalElevation(),
+                                       cmd.getFinalCoords()));
+        }
         setLowerEnabled(ce.canGoDown(cmd.getFinalElevation(),
                                      cmd.getFinalCoords()));
     }
@@ -2296,6 +2307,7 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
         final Entity ce = ce();
 
         // Aeros should be able to fly off if they reach a border hex with
+<<<<<<< HEAD
         // velocity
         // remaining
         // and facing the right direction
@@ -2304,6 +2316,10 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
             return;
         }
         if (!ce.isAirborne()) {
+=======
+        // velocity remaining and facing the right direction
+        if ((ce == null) || !ce.isAero() || !ce.isAirborne()) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
             setFlyOffEnabled(false);
             return;
         }
@@ -2320,7 +2336,9 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
             velocityLeft = step.getVelocityLeft();
         }
 
+        final IBoard board = clientgui.getClient().getGame().getBoard();
         // for spheroids in atmosphere we just need to check being on the edge
+<<<<<<< HEAD
         if (a.isSpheroid()
             && !clientgui.getClient().getGame().getBoard().inSpace()) {
             setFlyOffEnabled((position != null)
@@ -2330,6 +2348,14 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
                                                                   .getBoard().getWidth() - 1))
                                  || (position.getY() == 0) || (position.getY() == (clientgui
                                                                                            .getClient().getGame().getBoard().getHeight() - 1))));
+=======
+        if (a.isSpheroid() && !board.inSpace()) {
+            setFlyOffEnabled((position != null) && (ce.getWalkMP() > 0)
+                    && ((position.getX() == 0)
+                            || (position.getX() == (board.getWidth() - 1))
+                            || (position.getY() == 0)
+                            || (position.getY() == (board.getHeight() - 1))));
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
             return;
         }
 
@@ -2339,17 +2365,15 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
         // remaining
 
         boolean evenx = (position.getX() % 2) == 0;
-        if ((velocityLeft > 0)
-            && (((position.getX() == 0) && ((facing == 5) || (facing == 4)))
-                || ((position.getX() == (clientgui.getClient().getGame()
-                                                  .getBoard().getWidth() - 1)) && ((facing == 1) || (facing == 2)))
-                || ((position.getY() == 0)
-                    && ((facing == 1) || (facing == 5) || (facing == 0)) && evenx)
+        if ((velocityLeft > 0) && (((position.getX() == 0) && ((facing == 5) || (facing == 4)))
+                || ((position.getX() == (board.getWidth() - 1))
+                        && ((facing == 1) || (facing == 2)))
+                || ((position.getY() == 0) && ((facing == 1) || (facing == 5) || (facing == 0)) && evenx)
                 || ((position.getY() == 0) && (facing == 0))
-                || ((position.getY() == (clientgui.getClient().getGame()
-                                                  .getBoard().getHeight() - 1))
-                    && ((facing == 2) || (facing == 3) || (facing == 4)) && !evenx) || ((position.getY() == (clientgui
-                                                                                                                     .getClient().getGame().getBoard().getHeight() - 1)) && (facing == 3)))) {
+                || ((position.getY() == (board.getHeight() - 1))
+                        && ((facing == 2) || (facing == 3) || (facing == 4)) && !evenx)
+                || ((position.getY() == (board.getHeight() - 1))
+                        && (facing == 3)))) {
             setFlyOffEnabled(true);
         } else {
             setFlyOffEnabled(false);
@@ -2522,7 +2546,28 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
         
         final Entity ce = ce();
         
+<<<<<<< HEAD
         if (!(ce instanceof QuadVee || ce instanceof LandAirMech
+=======
+        if (null == ce) {
+            setModeConvertEnabled(false);
+            return;
+        }
+        
+        if (ce instanceof LandAirMech) {
+            boolean canConvert = false;
+            for (int i = 0; i < 3; i++) {
+                if (i != ce.getConversionMode()
+                        && ((LandAirMech)ce).canConvertTo(ce.getConversionMode(), i)) {
+                    canConvert = true;
+                }
+            }
+            if (!canConvert) {
+                setModeConvertEnabled(false);
+                return;
+            }
+        } else if (!(ce instanceof QuadVee
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                 || (ce instanceof Mech && ((Mech)ce).hasTracks()))) {
             setModeConvertEnabled(false);
             return;
@@ -3112,7 +3157,7 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
              * that these excess fighters will be distributed equally among
              * available doors
              */
-            doors = currentBay.getDoors();
+            doors = currentBay.getCurrentDoors();
             if (currentFighters.size() == 0) {
                 bayNum++;
                 continue;
@@ -3318,7 +3363,7 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
                         .filter(e -> !alreadyDropped.contains(e.getId()))
                         .collect(Collectors.toList());
 
-                doors = currentBay.getDoors();
+                doors = currentBay.getCurrentDoors();
                 if ((currentUnits.size() > 0) && (doors > 0)) {
                     String[] names = new String[currentUnits.size()];
                     String question = Messages
@@ -3547,8 +3592,13 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
             return;
         }
 
+<<<<<<< HEAD
         Aero a = (Aero) ce;
         if (a.getFuel() < 1) {
+=======
+        IAero a = (IAero) ce;
+        if (a.getCurrentFuel() < 1) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
             disableButtons();
             butDone.setEnabled(true);
             getBtn(MoveCommand.MOVE_NEXT).setEnabled(true);
@@ -4090,7 +4140,7 @@ public class MovementDisplay extends StatusBarPhaseDisplay {
             clientgui.bv.drawMovementData(ce(), cmd);
         } else if (actionCmd.equals(MoveCommand.MOVE_MODE_VEE.getCmd())) {
             if (ce instanceof QuadVee && ((QuadVee)ce).getMotiveType() == QuadVee.MOTIVE_WHEEL) {
-                adjustConvertSteps(EntityMovementMode.TRACKED);
+                adjustConvertSteps(EntityMovementMode.WHEELED);
             } else if ((ce instanceof Mech && ((Mech)ce).hasTracks())
                     || ce instanceof QuadVee) {
                 adjustConvertSteps(EntityMovementMode.TRACKED);

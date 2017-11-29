@@ -57,6 +57,7 @@ public class MULParser {
     private static final String KF = "KF";
     private static final String SAIL = "sail";
     private static final String AEROCRIT = "acriticals";
+    private static final String DROPCRIT = "dcriticals";
     private static final String TANKCRIT = "tcriticals";
     private static final String STABILIZER = "stabilizer";
     private static final String BREACH = "breached";
@@ -125,6 +126,7 @@ public class MULParser {
     private static final String POINTS = "points";
     private static final String TYPE = "type";
     private static final String SHOTS = "shots";
+    private static final String CAPACITY = "capacity";
     private static final String IS_HIT = "isHit";
     private static final String MUNITION = "munition";
     private static final String DIRECTION = "direction";
@@ -140,6 +142,11 @@ public class MULParser {
     private static final String RIGHT_THRUST = "rightThrust";
     private static final String LIFE_SUPPORT = "lifeSupport";
     private static final String GEAR = "gear";
+    private static final String DOCKING_COLLAR = "dockingcollar";
+    private static final String KFBOOM = "kfboom";
+    private static final String BAYDOORS = "doors";
+    private static final String BAY = "transportBay";
+    private static final String BAYDAMAGE = "damage";
     private static final String MDAMAGE = "damage";
     private static final String MPENALTY = "penalty";
     private static final String C3MASTERIS = "c3MasterIs";
@@ -210,7 +217,7 @@ public class MULParser {
     Vector<Entity> devastated;
     
     /**
-     * Keep a separate list of pilot/crews parsed becasue dismounted pilots may
+     * Keep a separate list of pilot/crews parsed because dismounted pilots may
      * need to be read separately
      */
     private Vector<Crew> pilots;
@@ -460,8 +467,12 @@ public class MULParser {
                     parseKF(currEle, entity);
                 } else if (nodeName.equalsIgnoreCase(SAIL)){
                     parseSail(currEle, entity);
+                } else if (nodeName.equalsIgnoreCase(BAY)){
+                    parseTransportBay(currEle, entity);
                 } else if (nodeName.equalsIgnoreCase(AEROCRIT)){
                     parseAeroCrit(currEle, entity);
+                } else if (nodeName.equalsIgnoreCase(DROPCRIT)){
+                    parseDropCrit(currEle, entity);
                 } else if (nodeName.equalsIgnoreCase(TANKCRIT)){
                     parseTankCrit(currEle, entity);
                 } else if (nodeName.equalsIgnoreCase(BOMBS)){
@@ -1300,6 +1311,7 @@ public class MULParser {
         String type = slotTag.getAttribute(TYPE);
         // String rear = slotTag.getAttribute( IS_REAR ); // is never read.
         String shots = slotTag.getAttribute(SHOTS);
+        String capacity = slotTag.getAttribute(CAPACITY);
         String hit = slotTag.getAttribute(IS_HIT);
         String destroyed = slotTag.getAttribute(IS_DESTROYED);
         String repairable = (slotTag.getAttribute(IS_REPAIRABLE).equals("") ? "true" : slotTag.getAttribute(IS_REPAIRABLE));
@@ -1546,6 +1558,24 @@ public class MULParser {
                             mounted.setShotsLeft(shotsVal);
 
                         } // End have-good-shots-value
+                        try {
+                            double capVal = Double.parseDouble(capacity);
+                            mounted.setAmmoCapacity(capVal);
+                        } catch (NumberFormatException excep) {
+                            // Handled by the next if test.
+                        }
+                        if (capacity.equals(NA)) {
+                            if (entity.hasETypeFlag(Entity.ETYPE_BATTLEARMOR)
+                                    || entity.hasETypeFlag(Entity.ETYPE_PROTOMECH)) {
+                                mounted.setAmmoCapacity(mounted.getOriginalShots()
+                                         * ((AmmoType) mounted.getType()).getKgPerShot() * 1000);
+                            } else {
+                                mounted.setAmmoCapacity(mounted.getOriginalShots()
+                                        * mounted.getType().getTonnage(entity)
+                                        / ((AmmoType) mounted.getType()).getShots());
+                            }
+                        }
+                        
 
                     } else {
                         // Bad XML equipment.
@@ -1810,6 +1840,82 @@ public class MULParser {
             a.setGearHit(true);
         }
     }
+    
+    /**
+     *  Parse a dropCrit tag for the given <code>Entity</code>.
+     *  @param dropCritTag
+     *  @param entity
+     */
+    private void parseDropCrit(Element dropCritTag, Entity entity){
+    	String dockingcollar = dropCritTag.getAttribute(DOCKING_COLLAR);
+    	String kfboom = dropCritTag.getAttribute(KFBOOM);
+    	
+    	Dropship d = (Dropship) entity;
+    	
+    	if (dockingcollar.length() > 0) {
+    		d.setDamageDockCollar(true);
+    	}
+    	if (kfboom.length() > 0) {
+    		d.setDamageKFBoom(true);
+    	}
+    }
+    
+    /**
+     *  Parse cargo bay and door the given <code>Entity</code>.
+     *  Borrowed all this from the code that handles vehicle stabilizer crits by location.
+     *  
+     *  @param entity
+     */
+    private void parseTransportBay (Element bayTag, Entity entity) {
+    	// Look for the element's attributes.
+    	String index = bayTag.getAttribute(INDEX);
+    	
+    	int bay;
+    	// Did we find the required index?
+    	if ((index == null) || (index.length() == 0)) {
+    		warning.append("Could not find index for bay.\n");
+    		return;
+    	} else {
+    	// Try to get a good index value.
+    		bay = -1;
+    		try {
+    			bay = Integer.parseInt(index);
+    		} catch (NumberFormatException excep) {
+    			// Handled by the next if test
+    		}
+    		if (bay < 0) {
+    			warning.append("Found invalid index value for bay: ").append(index).append(".\n");
+    			return;
+    		} else if (bay > entity.getTransportBays().size()) {
+    			warning.append("The entity, ")
+    			.append(entity.getShortName())
+    			.append(" does not have a bay at index: ")
+    			.append(bay).append(".\n");
+    			return;
+    		}
+    	} // End check for required fields
+    	
+    	Bay currentbay = entity.getBayById(bay);
+    	
+    	// Handle children for each bay.
+    	NodeList nl = bayTag.getChildNodes();
+    	for (int i = 0; i < nl.getLength(); i++) {
+    		Node currNode = nl.item(i);
+    		
+    		if (currNode.getParentNode() != bayTag) {
+    			continue;
+    		}
+    		int nodeType = currNode.getNodeType();
+    		if (nodeType == Node.ELEMENT_NODE) {
+    			String nodeName = currNode.getNodeName();
+    			if (nodeName.equalsIgnoreCase(BAYDAMAGE)) {
+    				currentbay.setBayDamage(Double.parseDouble(currNode.getTextContent()));
+    			} else if (nodeName.equalsIgnoreCase(BAYDOORS)) {
+                    currentbay.setCurrentDoors(Integer.parseInt(currNode.getTextContent()));
+    		    }
+    	    }
+        }
+    } // End parseTransportBay
     
     /**
      * Parse a tankCrit tag for the given <code>Entity</code>.

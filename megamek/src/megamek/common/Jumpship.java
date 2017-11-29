@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import megamek.common.options.OptionsConstants;
-import megamek.common.weapons.BayWeapon;
+import megamek.common.weapons.bayweapons.BayWeapon;
 
 /**
  * @author Jay Lawson
@@ -42,6 +42,16 @@ public class Jumpship extends Aero {
 
     public static final int GRAV_DECK_STANDARD_MAX = 100;
     public static final int GRAV_DECK_LARGE_MAX = 250;
+    
+    public static final int DRIVE_CORE_STANDARD    = 0;
+    public static final int DRIVE_CORE_COMPACT     = 1;
+    public static final int DRIVE_CORE_SUBCOMPACT  = 2;
+    public static final int DRIVE_CORE_NONE        = 3;
+    public static final int DRIVE_CORE_PRIMITIVE   = 4;
+    
+    // The percentage of the total unit weight taken up by the drive core. The value
+    // given for primitive assumes a 30ly range, but the final value has to be computed.
+    private static double[] DRIVE_CORE_WEIGHT_PCT = { 0.95, 0.4525, 0.5, 0.0, 0.95 };
 
     private static String[] LOCATION_ABBRS = { "NOS", "FLS", "FRS", "AFT", "ALS", "ARS" };
     private static String[] LOCATION_NAMES = { "Nose", "Left Front Side", "Right Front Side", "Aft", "Aft Left Side",
@@ -49,6 +59,8 @@ public class Jumpship extends Aero {
 
     private int kf_integrity = 0;
     private int sail_integrity = 0;
+    private int driveCoreType = DRIVE_CORE_STANDARD;
+    private int jumpRange = 30; // Primitive jumpships can have a reduced range
 
     // crew and passengers
     private int nCrew = 0;
@@ -86,11 +98,51 @@ public class Jumpship extends Aero {
         super();
         damThresh = new int[] { 0, 0, 0, 0, 0, 0 };
     }
+    
+    
+    //ASEW Missile Effects, per location
+    //Values correspond to Locations: NOS,FLS,FRS,AFT,ALS,ARS
+    private int asewAffectedTurns[] = { 0, 0, 0, 0, 0, 0};
+    
+    /*
+     * Sets the number of rounds a specified firing arc is affected by an ASEW missile
+     * @param arc - integer representing the desired firing arc
+     * @param turns - integer specifying the number of end phases that the effects last through
+     * Technically, about 1.5 turns elapse per the rules for ASEW missiles in TO
+     */
+    public void setASEWAffected(int arc, int turns) {
+        asewAffectedTurns[arc] = turns;
+    }
+    
+    /*
+     * Returns the number of rounds a specified firing arc is affected by an ASEW missile
+     * @param arc - integer representing the desired firing arc
+     */
+    public int getASEWAffected(int arc) {
+        return asewAffectedTurns[arc];
+    }
+
+    protected static final TechAdvancement TA_JUMPSHIP = new TechAdvancement(TECH_BASE_ALL)
+            .setAdvancement(DATE_NONE, 2300).setISApproximate(false, true)
+            .setProductionFactions(F_TA).setTechRating(RATING_D)
+            .setAvailability(RATING_D, RATING_E, RATING_D, RATING_F)
+            .setStaticTechLevel(SimpleTechLevel.ADVANCED);
+    protected static final TechAdvancement TA_JUMPSHIP_PRIMITIVE = new TechAdvancement(TECH_BASE_IS)
+            .setISAdvancement(2100, 2200, DATE_NONE, 2500)
+            .setISApproximate(true, true, false, false)
+            .setProductionFactions(F_TA).setTechRating(RATING_D)
+            .setAvailability(RATING_D, RATING_X, RATING_X, RATING_X)
+            .setStaticTechLevel(SimpleTechLevel.ADVANCED);
+    
+    @Override
+    public TechAdvancement getConstructionTechAdvancement() {
+        return isPrimitive()? TA_JUMPSHIP_PRIMITIVE : TA_JUMPSHIP;
+    }
 
     public CrewType defaultCrewType() {
         return CrewType.VESSEL;
     }
-
+    
     @Override
     public int locations() {
         return 6;
@@ -286,6 +338,56 @@ public class Jumpship extends Aero {
     public int getNOtherCrew() {
         return nOtherCrew;
     }
+    
+    @Override
+    public double getFuelPointsPerTon() {
+        double ppt;
+        if (getWeight() < 110000) {
+            ppt = 10;
+        } else if (getWeight() < 250000) {
+            ppt = 5;
+        } else {
+            ppt = 2.5;
+        }
+        if (isPrimitive()) {
+            return ppt / primitiveFuelFactor();
+        }
+        return ppt;
+    }
+
+    @Override
+    public double getStrategicFuelUse() {
+        double fuelUse;
+    	if (weight >= 200000) {
+    		fuelUse = 3.95;
+    	} else if (weight >= 100000) {
+    	    fuelUse = 1.98;
+    	} else if (weight >= 50000) {
+    	    fuelUse = 0.98;
+    	} else {
+    	    fuelUse = 0.28;
+    	}
+    	if (isPrimitive()) {
+    	    return fuelUse * primitiveFuelFactor();
+    	}
+    	return fuelUse;
+    }
+
+    @Override
+    public double primitiveFuelFactor() {
+        int year = getOriginalBuildYear();
+        if (year >= 2300) {
+            return 1.0;
+        } else if (year >= 2251) {
+            return 1.1;
+        } else if (year >= 2201) {
+            return 1.4;
+        } else if (year >= 2151) {
+            return 1.7;
+        } else {
+            return 2.0;
+        }
+    }
 
     @Override
     public String[] getLocationAbbrs() {
@@ -325,6 +427,39 @@ public class Jumpship extends Aero {
 
     public boolean canJump() {
         return kf_integrity > 0;
+    }
+    
+    public int getDriveCoreType() {
+        return driveCoreType;
+    }
+    
+    public void setDriveCoreType(int driveCoreType) {
+        this.driveCoreType = driveCoreType;
+    }
+
+    /**
+     * Get maximum range of a jump
+     */
+    public int getJumpRange() {
+        return jumpRange;
+    }
+    
+    /**
+     * Set maximum jump range (used for primitive jumpships)
+     */
+    public void setJumpRange(int range) {
+        jumpRange = range;
+    }
+    
+    /**
+     * @return The weight of the jump drive core for this unit
+     */
+    public double getJumpDriveWeight() {
+        double pct = DRIVE_CORE_WEIGHT_PCT[driveCoreType];
+        if (driveCoreType == DRIVE_CORE_PRIMITIVE) {
+            pct = 0.05 + 0.03 * jumpRange;
+        }
+        return Math.ceil(getWeight() * pct); 
     }
 
     // different firing arcs
@@ -656,6 +791,9 @@ public class Jumpship extends Aero {
                 if ((mLinker.getType() instanceof MiscType) && mLinker.getType().hasFlag(MiscType.F_ARTEMIS)) {
                     dBV *= 1.2;
                 }
+                if ((mLinker.getType() instanceof MiscType) && mLinker.getType().hasFlag(MiscType.F_ARTEMIS_PROTO)) {
+                    dBV *= 1.1;
+                }
                 if ((mLinker.getType() instanceof MiscType) && mLinker.getType().hasFlag(MiscType.F_ARTEMIS_V)) {
                     dBV *= 1.3;
                 }
@@ -948,11 +1086,11 @@ public class Jumpship extends Aero {
             }
         }
 
-        if (armorType[0] == EquipmentType.T_ARMOR_FERRO_IMP) {
+        if (armorType[0] == EquipmentType.T_ARMOR_LC_FERRO_IMP) {
             baseArmor += 0.2;
-        } else if (armorType[0] == EquipmentType.T_ARMOR_FERRO_CARBIDE) {
+        } else if (armorType[0] == EquipmentType.T_ARMOR_LC_FERRO_CARBIDE) {
             baseArmor += 0.4;
-        } else if (armorType[0] == EquipmentType.T_ARMOR_LAMELLOR_FERRO_CARBIDE) {
+        } else if (armorType[0] == EquipmentType.T_ARMOR_LC_LAMELLOR_FERRO_CARBIDE) {
             baseArmor += 0.6;
         }
 

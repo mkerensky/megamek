@@ -19,7 +19,12 @@
 
 package megamek.common.verifier;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import megamek.common.Aero;
 import megamek.common.AmmoType;
@@ -30,10 +35,13 @@ import megamek.common.Engine;
 import megamek.common.Entity;
 import megamek.common.EntityMovementMode;
 import megamek.common.EquipmentType;
+import megamek.common.ITechManager;
+import megamek.common.ITechnology;
 import megamek.common.Mech;
 import megamek.common.MiscType;
 import megamek.common.Mounted;
 import megamek.common.Protomech;
+import megamek.common.SimpleTechLevel;
 import megamek.common.TechConstants;
 import megamek.common.Transporter;
 import megamek.common.WeaponType;
@@ -67,6 +75,10 @@ public abstract class TestEntity implements TestEntityOption {
     public abstract boolean isMech();
 
     public abstract boolean isAero();
+    
+    public abstract boolean isSmallCraft();
+    
+    public abstract boolean isJumpship();
 
     public abstract double getWeightControls();
 
@@ -205,6 +217,10 @@ public abstract class TestEntity implements TestEntityOption {
     public boolean ignoreFailedEquip(String name) {
         return options.ignoreFailedEquip(name);
     }
+    
+    public boolean showIncorrectIntroYear() {
+        return options.showIncorrectIntroYear();
+    }
 
     public boolean skip() {
         return options.skip();
@@ -266,6 +282,76 @@ public abstract class TestEntity implements TestEntityOption {
         return Math.round(value * Math.pow(10, precision))
                 / Math.pow(10, precision);
     }
+    
+    /**
+     * Filters all armor according to given tech constraints
+     *
+     * @param etype         The entity type bit mask
+     * @param industrial    For mechs; industrial mechs can only use certain armor types
+     *                      unless allowing experimental rules
+     * @param movementMode  For vehicles; hardened armor is illegal for some movement modes 
+     * @param techManager   The constraints used to filter the armor types
+     * @return A list of all armors that meet the tech constraints
+     */
+    public static List<EquipmentType> legalArmorsFor(long etype, boolean industrial,
+            EntityMovementMode movementMode, ITechManager techManager) {
+        if ((etype & Entity.ETYPE_BATTLEARMOR) != 0) {
+            return TestBattleArmor.legalArmorsFor(techManager);
+        } else if ((etype & Entity.ETYPE_SMALL_CRAFT) != 0) {
+            return TestSmallCraft.legalArmorsFor(techManager);
+        } else if ((etype & Entity.ETYPE_AERO) != 0) {
+            return TestAero.legalArmorsFor(techManager);
+        } else if ((etype & Entity.ETYPE_TANK) != 0) {
+            return TestTank.legalArmorsFor(movementMode, techManager);
+        } else if ((etype & Entity.ETYPE_MECH) != 0) {
+            return TestMech.legalArmorsFor(etype, industrial, techManager);
+        } else {
+            return Collections.emptyList();
+        }
+    }
+    
+    public static List<EquipmentType> validJumpJets(long entitytype, boolean industrial) {
+        if ((entitytype & Entity.ETYPE_MECH) != 0) {
+            return TestMech.MechJumpJets.allJJs(industrial);
+        } else if ((entitytype & Entity.ETYPE_TANK) != 0) {
+            return Collections.singletonList(EquipmentType.get("VehicleJumpJet"));
+        } else if ((entitytype & Entity.ETYPE_BATTLEARMOR) != 0) {
+            return TestBattleArmor.BAMotiveSystems.allSystems();
+        } else if ((entitytype & Entity.ETYPE_PROTOMECH) != 0) {
+            // Until we have a TestProtomech
+            return Arrays.asList(new EquipmentType[] {
+                EquipmentType.get("ProtomechJumpJet"),
+                EquipmentType.get("ExtendedJumpJetSystem"),
+                EquipmentType.get("ProtomechUMU")});
+        } else {
+            return Collections.emptyList();
+        }
+    }
+    
+    /**
+     * Additional crew requirements for vehicles and aerospace vessels for certain types of
+     * equipment.
+     */
+    public static int equipmentCrewRequirements(EquipmentType eq) {
+        if (eq instanceof MiscType) {
+            if (eq.hasFlag(MiscType.F_MASH)
+                    || eq.hasFlag(MiscType.F_MASH_EXTRA)
+                    || eq.hasFlag(MiscType.F_MOBILE_FIELD_BASE)) {
+                return 5;
+            }
+            if (eq.hasFlag(MiscType.F_FIELD_KITCHEN)) {
+                return 3;
+            }
+            if (eq.hasFlag(MiscType.F_COMMUNICATIONS)) {
+                return (int) eq.getTonnage(null);
+            }
+            if (eq.hasFlag(MiscType.F_MOBILE_HPG)) {
+                // Mobile HPG has crew requirement of 10; ground-mobile has requirement of 1.
+                return eq.hasFlag(MiscType.F_TANK_EQUIPMENT)? 1 : 10;
+            }
+        }
+        return 0;
+    }
 
     private boolean hasMASC() {
         if (getEntity() instanceof Mech) {
@@ -273,7 +359,7 @@ public abstract class TestEntity implements TestEntityOption {
         }
         return false;
     }
-
+    
     public String printShortMovement() {
         return "Movement: "
                 + Integer.toString(getEntity().getOriginalWalkMP())
@@ -342,22 +428,20 @@ public abstract class TestEntity implements TestEntityOption {
     }
 
     public double getWeightAllocatedArmor() {
-        double armorWeight = 0;
         if (!getEntity().hasPatchworkArmor()) {
-            armorWeight += armor[0].getWeightArmor(getTotalOArmor(),
-                    getWeightCeilingArmor());
+            return (armor[0].getWeightArmor(getTotalOArmor(), getWeightCeilingArmor()));
         } else {
+            double armorWeight = 0;
             for (int i = 0; i < armor.length; i++) {
                 int points = getEntity().getOArmor(i);
                 if (getEntity().hasRearArmor(i) &&
                         (getEntity().getOArmor(i, true) > 0)) {
                     points += getEntity().getOArmor(i, true);
                 }
-                armorWeight += armor[i].getWeightArmor(points,
-                        getWeightCeilingArmor());
+                armorWeight += armor[i].getRawWeightArmor(points);
             }
+            return TestEntity.ceilMaxHalf(armorWeight, getWeightCeilingArmor());
         }
-        return armorWeight;
     }
 
     public double getWeightMiscEquip() {
@@ -444,7 +528,7 @@ public abstract class TestEntity implements TestEntityOption {
 
     public double getWeightWeapon() {
         double weight = 0.0;
-        for (Mounted m : getEntity().getWeaponList()) {
+        for (Mounted m : getEntity().getTotalWeaponList()) {
             WeaponType wt = (WeaponType) m.getType();
             if (m.isDWPMounted()){
                 weight += wt.getTonnage(getEntity()) * 0.75;
@@ -522,7 +606,7 @@ public abstract class TestEntity implements TestEntityOption {
             }
 
             buff.append(StringUtil.makeLength(mt.getName(), 20));
-            buff.append(
+            buff.append(" ").append(
                     StringUtil.makeLength(getLocationAbbr(m.getLocation()),
                             getPrintSize() - 5 - 20))
                     .append(TestEntity.makeWeightString(mt
@@ -735,15 +819,30 @@ public abstract class TestEntity implements TestEntityOption {
     }
 
     public boolean hasIllegalTechLevels(StringBuffer buff, int ammoTechLvl) {
+        /* A large number of units have official tech levels lower than their components at the
+         * intro date. We test instead whether the stated tech level is ever possible based on the
+         * equipment. We also test for mixed IS/Clan tech in units that are not designated as mixed.
+         */
         boolean retVal = false;
-        int eTechLevel = getEntity().getTechLevel();
+        int eTechLevel = SimpleTechLevel.convertCompoundToSimple(getEntity().getTechLevel()).ordinal();
+        int eRulesLevel = getEntity().findMinimumRulesLevel().ordinal();
+        if ((eTechLevel >= eRulesLevel) && (getEntity().getEarliestTechDate() <= getEntity().getYear())) {
+            return false;
+        }
+        
         int eTLYear = getEntity().getTechLevelYear();
-        boolean mixedTech = getEntity().isMixedTech();
         for (Mounted mounted : getEntity().getEquipment()) {
             EquipmentType nextE = mounted.getType();
-            int eqTechLvl = nextE.getTechLevel(eTLYear);
+            int eqRulesLevel = getEntity().isMixedTech()?
+                    nextE.findMinimumRulesLevel().ordinal() : nextE.findMinimumRulesLevel(getEntity().isClan()).ordinal();
+            boolean illegal = eqRulesLevel > eRulesLevel;
+            if (!getEntity().isMixedTech()) {
+                illegal |= getEntity().isClan() && nextE.getTechBase() == ITechnology.TECH_BASE_IS;
+                illegal |= !getEntity().isClan() && nextE.getTechBase() == ITechnology.TECH_BASE_CLAN;
+            }
+            int eqTechLevel = TechConstants.convertFromSimplelevel(eqRulesLevel, nextE.isClan());
             if (nextE instanceof AmmoType) {
-                if (!TechConstants.isLegal(ammoTechLvl, eqTechLvl, mixedTech)) {
+                if (eqRulesLevel > eRulesLevel) {
                     if (!retVal) {
                         buff.append("Ammo illegal at unit's tech level (");
                         buff.append(TechConstants
@@ -756,11 +855,10 @@ public abstract class TestEntity implements TestEntityOption {
                     buff.append(nextE.getName());
                     buff.append(", (");
                     buff.append(TechConstants
-                            .getLevelDisplayableName(eqTechLvl));
+                            .getLevelDisplayableName(eqTechLevel));
                     buff.append(")\n");
                 }
-            } else if (!(TechConstants.isLegal(eTechLevel, eqTechLvl, true,
-                    mixedTech))) {
+            } else if (illegal) {
                 if (!retVal) {
                     buff.append("Equipment illegal at unit's tech level ");
                     buff.append(TechConstants
@@ -773,81 +871,80 @@ public abstract class TestEntity implements TestEntityOption {
                 buff.append(nextE.getName());
                 buff.append(", (");
                 buff.append(TechConstants
-                        .getLevelDisplayableName(eqTechLvl));
+                        .getLevelDisplayableName(eqTechLevel));
                 buff.append(")\n");
             }
         }
         // Check cockpit TL
-        int cockpitTL;
-        int cockpitType;
-        if (getEntity() instanceof Aero) {
-            cockpitType =  ((Aero) getEntity()).getCockpitType();
-            cockpitTL = TechConstants.getCockpitTechLevel(
-                    cockpitType, Entity.ETYPE_AERO,
-                    getEntity().isClan(), eTLYear);
-            if (!TechConstants.isLegal(eTechLevel, cockpitTL, mixedTech)) {
-                buff.append("Cockpit is illegal at unit's tech level (");
-                buff.append(TechConstants
-                        .getLevelDisplayableName(eTechLevel));
-                buff.append(", ");
-                buff.append(eTLYear);
-                buff.append("): ");
-                buff.append(Mech.getCockpitDisplayString(cockpitType));
-                buff.append(" (");
-                buff.append(TechConstants
-                        .getLevelDisplayableName(cockpitTL));
-                buff.append(")\n");
-                retVal = true;
-            }
+        ITechnology cockpit = null;
+        String cockpitName = null;
+        if (getEntity().getEntityType() == Entity.ETYPE_AERO) {
+            cockpit = ((Aero)getEntity()).getCockpitTechAdvancement();
+            cockpitName = ((Aero)getEntity()).getCockpitTypeString();
         } else if (getEntity() instanceof Mech) {
-            // TODO: Enable TL testing for cockpits/gyros
-            //  This ends up causing canon units to fail, and we have to come
-            //  up with a way to deal with this
-            /*
-            Mech mech = (Mech) getEntity();
-            cockpitType = mech.getCockpitType();
-            cockpitTL = TechConstants.getCockpitTechLevel(cockpitType,
-                    mech.getEntityType(), mech.isClan(), eTLYear);
-            int gyroType = mech.getGyroType();
-            int gyroTL = TechConstants.getGyroTechLevel(gyroType,
-                    mech.isClan(), eTLYear);
-            if (!TechConstants.isLegal(eTechLevel, cockpitTL, mixedTech)) {
+            cockpit = ((Mech)getEntity()).getCockpitTechAdvancement();
+            cockpitName = ((Mech)getEntity()).getCockpitTypeString();
+        }
+        if (cockpit != null) {
+            int eqRulesLevel = getEntity().isMixedTech()?
+                    cockpit.findMinimumRulesLevel().ordinal() : cockpit.findMinimumRulesLevel(getEntity().isClan()).ordinal();
+            boolean illegal = eqRulesLevel > eRulesLevel;
+            if (!getEntity().isMixedTech()) {
+                illegal |= getEntity().isClan() && cockpit.getTechBase() == ITechnology.TECH_BASE_IS;
+                illegal |= !getEntity().isClan() && cockpit.getTechBase() == ITechnology.TECH_BASE_CLAN;                
+            }
+            if (illegal) {
                 buff.append("Cockpit is illegal at unit's tech level (");
                 buff.append(TechConstants
                         .getLevelDisplayableName(eTechLevel));
                 buff.append(", ");
                 buff.append(eTLYear);
                 buff.append("): ");
-                buff.append(Mech.getCockpitDisplayString(cockpitType));
+                buff.append(cockpitName);
                 buff.append(" (");
                 buff.append(TechConstants
-                        .getLevelDisplayableName(cockpitTL));
+                        .getLevelDisplayableName(TechConstants.convertFromSimplelevel(eqRulesLevel, cockpit.isClan())));
                 buff.append(")\n");
                 retVal = true;
             }
-            if (!TechConstants.isLegal(eTechLevel, gyroTL, mixedTech)) {
-                buff.append("Gyro is illegal at unit's tech level (");
-                buff.append(TechConstants
-                        .getLevelDisplayableName(eTechLevel));
-                buff.append(", ");
-                buff.append(eTLYear);
-                buff.append("): ");
-                buff.append(Mech.getGyroDisplayString(gyroType));
-                buff.append(" (");
-                buff.append(TechConstants
-                        .getLevelDisplayableName(cockpitTL));
-                buff.append(")\n");
-                retVal = true;
+        }
+        if (getEntity() instanceof Mech) {
+            ITechnology gyro = ((Mech)getEntity()).getGyroTechAdvancement();
+            if (gyro != null) {
+                int eqRulesLevel = getEntity().isMixedTech()?
+                        gyro.findMinimumRulesLevel().ordinal() : gyro.findMinimumRulesLevel(getEntity().isClan()).ordinal();
+                boolean illegal = eqRulesLevel > eRulesLevel;
+                if (!getEntity().isMixedTech()) {
+                    illegal |= getEntity().isClan() && gyro.getTechBase() == ITechnology.TECH_BASE_IS;
+                    illegal |= !getEntity().isClan() && gyro.getTechBase() == ITechnology.TECH_BASE_CLAN;                
+                }
+                if (illegal) {
+                    buff.append("Gyro is illegal at unit's tech level (");
+                    buff.append(TechConstants
+                            .getLevelDisplayableName(eTechLevel));
+                    buff.append(", ");
+                    buff.append(eTLYear);
+                    buff.append("): ");
+                    buff.append(((Mech)getEntity()).getGyroTypeString());
+                    buff.append(" (");
+                    buff.append(TechConstants
+                            .getLevelDisplayableName(TechConstants.convertFromSimplelevel(eqRulesLevel,
+                                    gyro.isClan())));
+                    buff.append(")\n");
+                    retVal = true;
+                }
             }
-            */
         }
         if (getEntity().hasEngine()) {
-            // TODO: Enable TL testing for engines
-            //  This ends up causing canon units to fail, and we have to come
-            //  up with a way to deal with this
-            /*
-            int engineTL = getEntity().getEngine().getTechType(eTLYear);
-            if (!TechConstants.isLegal(eTechLevel, engineTL, mixedTech)) {
+            ITechnology engine = getEntity().getEngine().getTechAdvancement();
+            int eqRulesLevel = getEntity().isMixedTech()?
+                    engine.findMinimumRulesLevel().ordinal() : engine.findMinimumRulesLevel(getEntity().isClan()).ordinal();
+            boolean illegal = eqRulesLevel > eRulesLevel;
+            if (!getEntity().isMixedTech()) {
+                illegal |= getEntity().isClan() && engine.getTechBase() == ITechnology.TECH_BASE_IS;
+                illegal |= !getEntity().isClan() && engine.getTechBase() == ITechnology.TECH_BASE_CLAN;                
+            }
+            if (illegal) {
                 buff.append("Engine is illegal at unit's tech level (");
                 buff.append(TechConstants
                         .getLevelDisplayableName(eTechLevel));
@@ -857,14 +954,210 @@ public abstract class TestEntity implements TestEntityOption {
                 buff.append(getEntity().getEngine().getShortEngineName());
                 buff.append(" (");
                 buff.append(TechConstants
-                        .getLevelDisplayableName(engineTL));
+                        .getLevelDisplayableName(TechConstants.convertFromSimplelevel(eqRulesLevel,
+                                engine.isClan())));
                 buff.append(")\n");
-                buff.append("Engine is illegal at unit's tech level: ");
-                buff.append(getEntity().getEngine().getShortEngineName());
                 buff.append("\n");
                 retVal = true;
             }
-            */
+        }
+        Set<String> armors;
+        if (!getEntity().hasPatchworkArmor()) {
+            armors = Collections.singleton(EquipmentType.getArmorTypeName(getEntity().getArmorType(1),
+                    TechConstants.isClan(getEntity().getArmorTechLevel(1))));
+        } else {
+            int eqRulesLevel = getEntity().isMixedTech()?
+                    Entity.getPatchworkArmorAdvancement().findMinimumRulesLevel().ordinal() :
+                        Entity.getPatchworkArmorAdvancement().findMinimumRulesLevel(getEntity().isClan()).ordinal();
+            if (eqRulesLevel > eRulesLevel) {
+                buff.append("Armor is illegal at unit's tech level (");
+                buff.append(TechConstants
+                        .getLevelDisplayableName(eTechLevel));
+                buff.append(", ");
+                buff.append(eTLYear);
+                buff.append("): Patchwork (");
+                buff.append(TechConstants
+                        .getLevelDisplayableName(TechConstants.convertFromSimplelevel(eqRulesLevel,
+                                getEntity().isClan())));
+                buff.append(")\n");
+                buff.append("\n");
+                retVal = true;
+            }
+            
+            armors = new HashSet<>();
+            for (int loc = 0; loc < getEntity().locations(); loc++) {
+                armors.add(EquipmentType.getArmorTypeName(getEntity().getArmorType(loc),
+                        TechConstants.isClan(getEntity().getArmorTechLevel(loc))));
+            }
+        }
+        for (String atName : armors) {
+            EquipmentType at = EquipmentType.get(atName);
+            // Can be null in the case of vehicle body or asf wings.   
+            if (null ==  at) {
+                continue;
+            }
+            int eqRulesLevel = getEntity().isMixedTech()?
+                    at.findMinimumRulesLevel().ordinal() : at.findMinimumRulesLevel(getEntity().isClan()).ordinal();
+            boolean illegal = eqRulesLevel > eRulesLevel;
+            if (!getEntity().isMixedTech()) {
+                illegal |= getEntity().isClan() && at.getTechBase() == ITechnology.TECH_BASE_IS;
+                illegal |= !getEntity().isClan() && at.getTechBase() == ITechnology.TECH_BASE_CLAN;                
+            }
+            if (illegal) {
+                buff.append("Armor is illegal at unit's tech level (");
+                buff.append(TechConstants
+                        .getLevelDisplayableName(eTechLevel));
+                buff.append(", ");
+                buff.append(eTLYear);
+                buff.append("): ");
+                buff.append(atName);
+                buff.append(" (");
+                buff.append(TechConstants
+                        .getLevelDisplayableName(TechConstants.convertFromSimplelevel(eqRulesLevel,
+                                at.isClan())));
+                buff.append(")\n");
+                buff.append("\n");
+                retVal = true;
+            }
+        }
+
+        return retVal;
+    }
+
+    /**
+     * Compares intro dates of all components to the unit intro year.
+     * 
+     * @param buff Descriptions of problems will be added to the buffer.
+     * @return     Whether the unit has an intro year equal to or later than all the components.
+     */
+    public boolean hasIncorrectIntroYear(StringBuffer buff) {
+        boolean retVal = false;
+        if (getEntity().getEarliestTechDate() <= getEntity().getYear()) {
+            return false;
+        }
+        if (getEntity().isOmni()) {
+            int introDate = Entity.getOmniAdvancement()
+                    .getIntroductionDate(getEntity().isClan() || getEntity().isMixedTech());
+            if (getEntity().getYear() < introDate) {
+                retVal = true;
+                buff.append("Omni technology has intro date of ");
+                buff.append(introDate);
+                buff.append("\n");
+            }
+        }
+        Set<EquipmentType> checked = new HashSet<>();
+        for (Mounted mounted : getEntity().getEquipment()) {
+            final EquipmentType nextE = mounted.getType();
+            if (checked.contains(nextE)) {
+                continue;
+            }
+            checked.add(nextE);
+            int introDate = nextE.getIntroductionDate(getEntity().isClan());
+            if (getEntity().isMixedTech()) {
+                introDate = nextE.getIntroductionDate();
+            }
+            if (introDate > getEntity().getYear()) {
+                retVal = true;
+                buff.append(nextE.getName());
+                buff.append(" has intro date of ");
+                buff.append(introDate);
+                buff.append("\n");
+            }
+        }
+        Set<String> armors;
+        if (!getEntity().hasPatchworkArmor()) {
+            armors = Collections.singleton(EquipmentType.getArmorTypeName(getEntity().getArmorType(1),
+                    TechConstants.isClan(getEntity().getArmorTechLevel(1))));
+        } else {
+            int intro = getEntity().isMixedTech()?
+                    Entity.getPatchworkArmorAdvancement().getIntroductionDate() :
+                        Entity.getPatchworkArmorAdvancement().getIntroductionDate(getEntity().isClan());
+            if (getEntity().getYear() < intro) {
+                retVal = true;
+                buff.append("Patchwork armor has intro date of ");
+                buff.append(intro);
+                buff.append("\n");
+            }
+            armors = new HashSet<>();
+            for (int loc = 0; loc < getEntity().locations(); loc++) {
+                armors.add(EquipmentType.getArmorTypeName(getEntity().getArmorType(loc),
+                        TechConstants.isClan(getEntity().getArmorTechLevel(loc))));
+            }
+        }
+        for (String atName : armors) {
+            EquipmentType at = EquipmentType.get(atName);
+            if (checked.contains(at)) {
+                continue;
+            }
+            checked.add(at);
+            // Can be null in the case of vehicle body or asf wings.   
+            if (null ==  at) {
+                continue;
+            }
+            int introDate = at.getIntroductionDate(getEntity().isClan());
+            if (getEntity().isMixedTech()) {
+                introDate = at.getIntroductionDate();
+            }
+            if (introDate > getEntity().getYear()) {
+                retVal = true;
+                buff.append(at.getName());
+                buff.append(" armor has intro date of ");
+                buff.append(introDate);
+                buff.append("\n");
+            }
+        }
+        // Check cockpit TL
+        ITechnology cockpit = null;
+        String cockpitName = null;
+        if (getEntity() instanceof Aero) {
+            cockpit = ((Aero)getEntity()).getCockpitTechAdvancement();
+            cockpitName = ((Aero)getEntity()).getCockpitTypeString();
+        } else if (getEntity() instanceof Mech) {
+            cockpit = ((Mech)getEntity()).getCockpitTechAdvancement();
+            cockpitName = ((Mech)getEntity()).getCockpitTypeString();
+        }
+        if (null != cockpit) {
+            int introDate = cockpit.getIntroductionDate(getEntity().isClan());
+            if (getEntity().isMixedTech()) {
+                introDate = cockpit.getIntroductionDate();
+            }
+            if (introDate > getEntity().getYear()) {
+                retVal = true;
+                buff.append(cockpitName);
+                buff.append(" has intro date of ");
+                buff.append(introDate);
+                buff.append("\n");
+            }
+        }
+        if (getEntity() instanceof Mech) {
+            ITechnology gyro = ((Mech)getEntity()).getGyroTechAdvancement();
+            if (null != gyro) {
+                int introDate = gyro.getIntroductionDate(getEntity().isClan());
+                if (getEntity().isMixedTech()) {
+                    introDate = gyro.getIntroductionDate();
+                }
+                if (introDate > getEntity().getYear()) {
+                    retVal = true;
+                    buff.append(((Mech)getEntity()).getGyroTypeString());
+                    buff.append(" has intro date of ");
+                    buff.append(introDate);
+                    buff.append("\n");
+                }
+            }
+        }
+        if (getEntity().hasEngine()) {
+            ITechnology engine = getEntity().getEngine().getTechAdvancement();
+            int introDate = engine.getIntroductionDate(getEntity().isClan());
+            if (getEntity().isMixedTech()) {
+                introDate = engine.getIntroductionDate();
+            }
+            if (introDate > getEntity().getYear()) {
+                retVal = true;
+                buff.append(getEntity().getEngine().getShortEngineName());
+                buff.append(" has intro date of ");
+                buff.append(introDate);
+                buff.append("\n");
+            }
         }
 
         return retVal;
@@ -997,7 +1290,9 @@ public abstract class TestEntity implements TestEntityOption {
         double carryingSpace = getEntity().getTroopCarryingSpace();
         double cargoWeight = 0;
         for (Bay bay : getEntity().getTransportBays()) {
-            cargoWeight += bay.getWeight();
+            if (!bay.isQuarters()) {
+                cargoWeight += ceil(bay.getWeight(), Ceil.HALFTON);
+            }
         }
         return carryingSpace + cargoWeight;
     }
@@ -1074,14 +1369,18 @@ class Armor {
         this.armorType = armorType;
         this.armorFlags = armorFlags;
     }
-
+    
     public double getWeightArmor(int totalOArmor, TestEntity.Ceil roundWeight) {
         return Armor.getWeightArmor(armorType, armorFlags, totalOArmor,
                 roundWeight);
     }
-
-    public static double getWeightArmor(int armorType, int armorFlags,
-            int totalOArmor, TestEntity.Ceil roundWeight) {
+    
+    public double getRawWeightArmor(int totalOArmor) {
+        return Armor.getRawWeightArmor(armorType, armorFlags, totalOArmor);
+    }
+    
+    public static double getRawWeightArmor(int armorType, int armorFlags,
+            int totalOArmor) {
         double points = totalOArmor;
         int techLevel;
         if ((armorFlags & CLAN_ARMOR) != 0) {
@@ -1093,8 +1392,12 @@ class Armor {
                 techLevel);
         points /= multiplier;
         double pointsPerTon = 16.0f;
-        double armorWeight = points / pointsPerTon;
-        return TestEntity.ceilMaxHalf(armorWeight, roundWeight);
+        return points / pointsPerTon;
+    }
+
+    public static double getWeightArmor(int armorType, int armorFlags,
+            int totalOArmor, TestEntity.Ceil roundWeight) {
+        return TestEntity.ceilMaxHalf(getRawWeightArmor(armorType, armorFlags, totalOArmor), roundWeight);
     }
 
     public String getShortName() {

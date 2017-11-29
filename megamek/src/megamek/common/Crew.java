@@ -123,6 +123,7 @@ public class Crew implements Serializable {
     public static final String RANGEMASTER_MEDIUM = "Medium";
     public static final String RANGEMASTER_LONG = "Long";
     public static final String RANGEMASTER_EXTREME = "Extreme";
+    public static final String RANGEMASTER_LOS = "Line of Sight";
 
     // SPA Human TRO entity types
     public static final String HUMANTRO_NONE = "None";
@@ -643,42 +644,11 @@ public class Crew implements Serializable {
     }
 
     public int countOptions() {
-        int count = 0;
-
-        for (Enumeration<IOptionGroup> i = options.getGroups(); i.hasMoreElements(); ) {
-            IOptionGroup group = i.nextElement();
-            for (Enumeration<IOption> j = group.getOptions(); j.hasMoreElements(); ) {
-                IOption option = j.nextElement();
-
-                if (option.booleanValue()) {
-                    count++;
-                }
-            }
-        }
-
-        return count;
+        return options.count();
     }
 
     public int countOptions(String grpKey) {
-        int count = 0;
-
-        for (Enumeration<IOptionGroup> i = options.getGroups(); i.hasMoreElements(); ) {
-            IOptionGroup group = i.nextElement();
-
-            if (!group.getKey().equalsIgnoreCase(grpKey)) {
-                continue;
-            }
-
-            for (Enumeration<IOption> j = group.getOptions(); j.hasMoreElements(); ) {
-                IOption option = j.nextElement();
-
-                if (option != null && option.booleanValue()) {
-                    count++;
-                }
-            }
-        }
-
-        return count;
+        return options.count(grpKey);
     }
 
     /**
@@ -702,34 +672,7 @@ public class Crew implements Serializable {
      * group, using sep as the separator
      */
     public String getOptionList(String sep, String grpKey) {
-        StringBuffer adv = new StringBuffer();
-
-        if (null == sep) {
-            sep = "";
-        }
-
-        for (Enumeration<IOptionGroup> i = options.getGroups(); i.hasMoreElements(); ) {
-            IOptionGroup group = i.nextElement();
-            if (!group.getKey().equalsIgnoreCase(grpKey)) {
-                continue;
-            }
-            for (Enumeration<IOption> j = group.getOptions(); j.hasMoreElements(); ) {
-                IOption option = j.nextElement();
-
-                if ((option != null) && option.booleanValue()) {
-                    if (adv.length() > 0) {
-                        adv.append(sep);
-                    }
-
-                    adv.append(option.getName());
-                    if ((option.getType() == IOption.STRING) || (option.getType() == IOption.CHOICE) || (option.getType() == IOption.INTEGER)) {
-                        adv.append(" ").append(option.stringValue());
-                    }
-                }
-            }
-        }
-
-        return adv.toString();
+        return options.getOptionListString(sep, grpKey);
     }
 
     // Helper function to reverse getAdvantageList() above
@@ -1301,7 +1244,7 @@ public class Crew implements Serializable {
      */
     public boolean hasActiveCommandConsole() {
         int commandPos = 1 - getCurrentPilotIndex();
-        return isActive(commandPos) && !actedThisTurn[commandPos];
+        return crewType.equals(CrewType.COMMAND_CONSOLE) && isActive(commandPos) && !actedThisTurn[commandPos];
     }
     
     /**

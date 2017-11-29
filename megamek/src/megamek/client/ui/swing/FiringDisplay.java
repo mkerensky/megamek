@@ -48,6 +48,7 @@ import megamek.client.ui.swing.widget.MegamekButton;
 import megamek.client.ui.swing.widget.SkinSpecification;
 import megamek.common.Aero;
 import megamek.common.AmmoType;
+import megamek.common.BattleArmor;
 import megamek.common.BombType;
 import megamek.common.Building;
 import megamek.common.BuildingTarget;
@@ -982,6 +983,16 @@ public class FiringDisplay extends StatusBarPhaseDisplay implements
 
         // send change to the server
         int nMode = m.switchMode(forward);
+        // BattleArmor can fire popup-mine launchers individually. The mode determines
+        // how many will be fired, but we don't want to set the mode higher than the
+        // number of troopers in the squad.
+        if ((ce() instanceof BattleArmor)
+                && (m.getType() instanceof WeaponType)
+                && ((WeaponType)m.getType()).hasFlag(WeaponType.F_BA_INDIVIDUAL)
+                && (m.curMode().getName().contains("-shot"))
+                && (Integer.parseInt(m.curMode().getName().replace("-shot", "")) > ce().getTotalInternal())) {
+            m.setMode(0);
+        }
         clientgui.getClient().sendModeChange(cen, wn, nMode);
 
         // notify the player
@@ -1578,9 +1589,10 @@ public class FiringDisplay extends StatusBarPhaseDisplay implements
                 Mounted ammoMount = mounted.getLinked();
                 AmmoType ammoType = (AmmoType) ammoMount.getType();
                 waa.setAmmoId(ce().getEquipmentNum(ammoMount));
-                if (((ammoType.getMunitionType() == AmmoType.M_THUNDER_VIBRABOMB) && ((ammoType
-                        .getAmmoType() == AmmoType.T_LRM) || (ammoType
-                        .getAmmoType() == AmmoType.T_MML)))
+                if (((ammoType.getMunitionType() == AmmoType.M_THUNDER_VIBRABOMB) && 
+                        ((ammoType.getAmmoType() == AmmoType.T_LRM)
+                        || (ammoType.getAmmoType() == AmmoType.T_LRM_IMP)
+                        || (ammoType.getAmmoType() == AmmoType.T_MML)))
                         || (ammoType.getMunitionType() == AmmoType.M_VIBRABOMB_IV)) {
                     VibrabombSettingDialog vsd = new VibrabombSettingDialog(
                             clientgui.frame);
@@ -1924,7 +1936,8 @@ public class FiringDisplay extends StatusBarPhaseDisplay implements
                 clientgui.mechD.wPan.wToHitR.setText(Messages
                         .getString("FiringDisplay.alreadyFired")); //$NON-NLS-1$
                 setFireEnabled(false);
-            } else if (m.getType().hasFlag(WeaponType.F_AUTO_TARGET)) {
+            } else if (m.getType().hasFlag(WeaponType.F_AUTO_TARGET)
+            			|| (m.getType().hasModes() && m.curMode().equals("Point Defense"))) {
                 clientgui.mechD.wPan.wToHitR.setText(Messages
                         .getString("FiringDisplay.autoFiringWeapon"));
                 //$NON-NLS-1$
@@ -2476,8 +2489,10 @@ public class FiringDisplay extends StatusBarPhaseDisplay implements
                     && (munitionType == AmmoType.M_FLARE)) {
                 return new HexTarget(pos, game.getBoard(),
                         Targetable.TYPE_FLARE_DELIVER);
-            // Certain mek mortar types should target hexes
-            } else if ((aType.getAmmoType() == AmmoType.T_MEK_MORTAR)
+            // Certain mek mortar types and LRMs should target hexes
+            } else if (((aType.getAmmoType() == AmmoType.T_MEK_MORTAR)
+                    || (aType.getAmmoType() == AmmoType.T_LRM)
+                    || (aType.getAmmoType() == AmmoType.T_LRM_IMP))
                     && ((munitionType == AmmoType.M_AIRBURST) 
                             || (munitionType == AmmoType.M_SMOKE_WARHEAD))) {
                 return new HexTarget(pos, game.getBoard(),

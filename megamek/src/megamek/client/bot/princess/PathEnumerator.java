@@ -14,6 +14,7 @@
 package megamek.client.bot.princess;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,8 +33,11 @@ import megamek.common.IGame;
 import megamek.common.IHex;
 import megamek.common.MovePath;
 import megamek.common.MovePath.MoveStepType;
+import megamek.common.logging.LogLevel;
 import megamek.common.Terrains;
 import megamek.common.pathfinder.AbstractPathFinder.Filter;
+import megamek.common.pathfinder.AeroGroundPathFinder;
+import megamek.common.pathfinder.AeroGroundPathFinder.AeroGroundOffBoardFilter;
 import megamek.common.pathfinder.LongestPathFinder;
 import megamek.common.pathfinder.MovePathFinder;
 import megamek.common.pathfinder.ShortestPathFinder;
@@ -127,7 +131,13 @@ public class PathEnumerator {
                 return returnSet;
             }
             for (Integer id : getUnitPotentialLocations().keySet()) {
+<<<<<<< HEAD
                 if (groundOnly && (getGame().getEntity(id) instanceof Aero)) {
+=======
+                if (groundOnly
+                        && getGame().getEntity(id) != null
+                        && getGame().getEntity(id).isAero()) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                     continue;
                 }
 
@@ -184,27 +194,78 @@ public class PathEnumerator {
 
             // Start constructing the new list of paths.
             List<MovePath> paths = new ArrayList<>();
+<<<<<<< HEAD
             // Aero movement
             if (mover instanceof Aero) {
                 Aero aeroMover = (Aero)mover;
+=======
+            
+            // Aero movement on atmospheric ground maps
+            // currently only applies to a) conventional aircraft, b) aerotech units, c) lams in air mode
+            if(mover.isAirborne() &&
+               mover.isOnAtmosphericGroundMap() &&
+               mover.isAero() &&                    // guards against the edge case of airborne non-aero units
+               !((IAero) mover).isSpheroid()) {
+                AeroGroundPathFinder apf = AeroGroundPathFinder.getInstance(getGame());
+                MovePath startPath = new MovePath(getGame(), mover);
+                apf.run(startPath);
+                paths.addAll(apf.getAllComputedPathsUncategorized());
+                
+                // Remove illegal paths.
+                Filter<MovePath> filter = new Filter<MovePath>() {
+                    @Override
+                    public boolean shouldStay(MovePath movePath) {
+                        return isLegalAeroMove(movePath);
+                    }
+                };
+                
+                this.owner.log(this.getClass(), METHOD_NAME, LogLevel.DEBUG, "Unfiltered paths: " + paths.size());
+                paths = new ArrayList<>(filter.doFilter(paths));
+                this.owner.log(this.getClass(), METHOD_NAME, LogLevel.DEBUG, "Filtered out illegal paths: " + paths.size());
+                AeroGroundOffBoardFilter offBoardFilter = new AeroGroundOffBoardFilter();
+                paths = new ArrayList<>(offBoardFilter.doFilter(paths));
+                
+                MovePath offBoardPath = offBoardFilter.getShortestPath();
+                if(offBoardPath != null) {
+                    paths.add(offBoardFilter.getShortestPath());
+                }
+                
+                this.owner.log(this.getClass(), METHOD_NAME, LogLevel.DEBUG, "Filtered out offboard paths: " + paths.size());
+                
+                // This is code useful for debugging, but puts out a lot of log entries, which slows things down. 
+                HashMap<Integer, Integer> pathLengths = new HashMap<Integer, Integer>();
+                for(MovePath path : paths) {
+                    if(!pathLengths.containsKey(path.length())) {
+                        pathLengths.put(path.length(), 0);
+                    }
+                    Integer lengthCount = pathLengths.get(path.length());
+                    pathLengths.put(path.length(), lengthCount + 1);
+                    
+                    this.owner.log(this.getClass(), "Path ", LogLevel.DEBUG, path.toString());
+                }
+                
+                for(Integer length : pathLengths.keySet()) {
+                    this.owner.log(this.getClass(), METHOD_NAME, LogLevel.DEBUG, "Paths of length " + length + ": " + pathLengths.get(length));
+                }
+            } else if (mover.isAero()) {
+                IAero aeroMover = (IAero)mover;
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                 // Get the shortest paths possible.
                 ShortestPathFinder spf;
-                int maxVel;
+                
                 if (aeroMover.isSpheroid()) {
                     spf = ShortestPathFinder.newInstanceOfOneToAllSpheroid(
                             MoveStepType.FORWARDS, getGame());
-                    // We don't need to iterate over velocities for Spheroids
-                    maxVel = 0;
                 } else { // Aerodynes must expend all velocity
                     spf = ShortestPathFinder.newInstanceOfOneToAllAerodyne(
                             MoveStepType.FORWARDS, getGame());
-                    maxVel = Math.min(4, mover.getWalkMP());
                 }
-                spf.setAdjacencyMap(new MovePathFinder.NextStepsExtendedAdjacencyMap(
+                spf.setAdjacencyMap(new MovePathFinder.NextStepsAeroAdjacencyMap(
                         MoveStepType.FORWARDS));
-
+                
                 // Make sure we accelerate to avoid stalling as needed.
                 MovePath startPath = new MovePath(getGame(), mover);
+<<<<<<< HEAD
                 // This is kind of a hack, if we're on a ground map, each time
                 // we accelerate, that's 16 ground MP, so if we accelerate a
                 // a lot, we'll be here forever, so cap the amount of velocity
@@ -226,6 +287,10 @@ public class PathEnumerator {
                     spf.run(startPath);
                     paths.addAll(spf.getAllComputedPathsUncategorized());
                 }
+=======
+                spf.run(startPath);
+                paths.addAll(spf.getAllComputedPathsUncategorized());
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
 
                 // Remove illegal paths.
                 Filter<MovePath> filter = new Filter<MovePath>() {
@@ -235,7 +300,6 @@ public class PathEnumerator {
                     }
                 };
                 paths = new ArrayList<>(filter.doFilter(paths));
-
             } else { // Non-Aero movement
                 //add running moves
                 // TODO: Will this cause Princess to never use MASC?
@@ -364,17 +428,21 @@ public class PathEnumerator {
 
             if (!path.isMoveLegal()) {
                 if (path.getLastStep() == null) {
+                	LogAeroMoveLegalityEvaluation("illegal move with null last step", path);
                     return false;
                 }
                 if ((path.getLastStep().getType() != MoveStepType.RETURN) &&
                     (path.getLastStep().getType() != MoveStepType.OFF)) {
+                	LogAeroMoveLegalityEvaluation("illegal move without return/off at the end", path);
                     return false;
                 }
             }
 
+            // we have to have used all velocity by the last step
             if ((path.getLastStep() != null) && (path.getLastStep().getVelocityLeft() != 0)) {
                 if ((path.getLastStep().getType() != MoveStepType.RETURN) &&
                     (path.getLastStep().getType() != MoveStepType.OFF)) {
+                	LogAeroMoveLegalityEvaluation("not all velocity used without return/off at the end", path);
                     return false;
                 }
             }
@@ -382,6 +450,12 @@ public class PathEnumerator {
         } finally {
             getOwner().methodEnd(getClass(), METHOD_NAME);
         }
+    }
+    
+    private void LogAeroMoveLegalityEvaluation(String whyNot, MovePath path) {
+    	this.getOwner().log(this.getClass(), "isLegalAeroMove", LogLevel.DEBUG, 
+    			path.length() + ":" + 
+    			path.toString() + ":" + whyNot);
     }
 
     protected Map<Integer, List<MovePath>> getUnitPaths() {

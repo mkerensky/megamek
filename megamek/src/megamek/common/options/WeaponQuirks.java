@@ -20,6 +20,7 @@ import megamek.common.BattleArmor;
 import megamek.common.Dropship;
 import megamek.common.Entity;
 import megamek.common.EquipmentType;
+import megamek.common.GunEmplacement;
 import megamek.common.Infantry;
 import megamek.common.Jumpship;
 import megamek.common.MiscType;
@@ -27,7 +28,7 @@ import megamek.common.Protomech;
 import megamek.common.Tank;
 import megamek.common.WeaponType;
 import megamek.common.weapons.AmmoWeapon;
-import megamek.common.weapons.EnergyWeapon;
+import megamek.common.weapons.lasers.EnergyWeapon;
 
 /**
  * Contains the options determining quirks of the unit
@@ -63,6 +64,8 @@ public class WeaponQuirks extends AbstractOptions {
         addOption(wpnQuirk, OptionsConstants.QUIRK_WEAP_POS_MOD_WEAPONS, false); //$NON-NLS-1$
         addOption(wpnQuirk, OptionsConstants.QUIRK_WEAP_POS_JETTISON_CAPABLE, false); //$NON-NLS-1$
         addOption(wpnQuirk, OptionsConstants.QUIRK_WEAP_NEG_NON_FUNCTIONAL, false); //$NON-NLS-1$
+        addOption(wpnQuirk, OptionsConstants.QUIRK_WEAP_NEG_MISREPAIRED, false); //$NON-NLS-1$
+        addOption(wpnQuirk, OptionsConstants.QUIRK_WEAP_NEG_MISREPLACED, false); //$NON-NLS-1$
 
     }
     
@@ -158,7 +161,8 @@ public class WeaponQuirks extends AbstractOptions {
             if (en instanceof Protomech
                 || en instanceof Aero
                 || en instanceof Jumpship
-                || en instanceof Dropship) {
+                || en instanceof Dropship
+                || en instanceof GunEmplacement)  {
 
                 return false;
             }
@@ -169,6 +173,43 @@ public class WeaponQuirks extends AbstractOptions {
                 || en instanceof BattleArmor
                 || en instanceof Jumpship
                 || en instanceof Dropship) {
+
+                return false;
+            }
+        }
+        
+        if (qName.equals(OptionsConstants.QUIRK_WEAP_POS_DIRECT_TORSO_MOUNT)) {
+            if (en instanceof Aero
+                || en instanceof BattleArmor
+                || en instanceof Jumpship
+                || en instanceof Dropship
+                || en instanceof Tank
+                || en instanceof GunEmplacement) {
+
+                return false;
+            }
+        }
+        
+        if (qName.equals(OptionsConstants.QUIRK_WEAP_POS_STABLE_WEAPON)) {
+            if (en instanceof Aero
+                || en instanceof Jumpship
+                || en instanceof Dropship) {
+
+                return false;
+            }
+        }
+        
+        if (qName.equals(OptionsConstants.QUIRK_WEAP_NEG_EXPOSED_LINKAGE)) {
+            if (en instanceof Aero
+                || en instanceof Jumpship
+                || en instanceof Dropship) {
+
+                return false;
+            }
+        }
+        
+        if (qName.equals(OptionsConstants.QUIRK_WEAP_NEG_EM_INTERFERENCE)) {
+            if (en instanceof Jumpship) {
 
                 return false;
             }

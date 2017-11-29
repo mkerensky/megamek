@@ -43,18 +43,45 @@ public class BombChoicePanel extends JPanel implements Serializable, ItemListene
     private JLabel[] b_labels = new JLabel[BombType.B_NUM];
     private int maxPoints = 0;
     private int maxRows = (int) Math.ceil(BombType.B_NUM / 2.0);
+    
+    //Variable for MekHQ functionality
+    private int[] typeMax = null;
 
     //private BombChoicePanel m_bombs;
     //private JPanel panBombs = new JPanel();
 
+<<<<<<< HEAD
     @SuppressWarnings("unchecked")
     public BombChoicePanel(Aero aero, boolean at2Nukes, boolean allowAdvancedAmmo) {
         this.aero = aero;
+=======
+    public BombChoicePanel(IBomber bomber, boolean at2Nukes, boolean allowAdvancedAmmo) {
+        this.bomber = bomber;
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
         this.at2Nukes = at2Nukes;
         this.allowAdvancedAmmo = allowAdvancedAmmo;
+<<<<<<< HEAD
 
         maxPoints = aero.getMaxBombPoints();
         int[] bombChoices = aero.getBombChoices();
+=======
+        initPanel();
+    }
+    //Constructor to call from MekHQ to pass in typeMax
+    public BombChoicePanel(IBomber bomber, boolean at2Nukes, boolean allowAdvancedAmmo, int[] typeMax) {
+        this.bomber = bomber;
+        this.at2Nukes = at2Nukes;
+        this.allowAdvancedAmmo = allowAdvancedAmmo;
+        this.typeMax = typeMax;
+        initPanel();
+    }
+    
+    @SuppressWarnings("unchecked")
+    private void initPanel() {
+        maxPoints = bomber.getMaxBombPoints();
+        maxSize = bomber.getMaxBombSize();
+        int[] bombChoices = bomber.getBombChoices();
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
 
         // how many bomb points am I currently using?
         int curBombPoints = 0;
@@ -77,6 +104,17 @@ public class BombChoicePanel extends JPanel implements Serializable, ItemListene
             int maxNumBombs = Math.round(availBombPoints
                     / BombType.getBombCost(type))
                     + bombChoices[type];
+<<<<<<< HEAD
+=======
+            if (BombType.getBombCost(type) > maxSize) {
+                maxNumBombs = 0;
+            }
+            
+            if(typeMax != null) {
+                if (maxNumBombs > 0 && maxNumBombs > typeMax[type]) maxNumBombs = typeMax[type];
+            }
+            
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
             for (int x = 0; x <= maxNumBombs; x++) {
                 b_choices[type].addItem(Integer.toString(x));
             }
@@ -85,16 +123,19 @@ public class BombChoicePanel extends JPanel implements Serializable, ItemListene
             b_labels[type].setText(BombType.getBombName(type));
             b_choices[type].addItemListener(this);
 
-            if ((type == BombType.B_ALAMO)
-                && !at2Nukes) {
+            if ((type == BombType.B_ALAMO) && !at2Nukes) {
                 b_choices[type].setEnabled(false);
             }
+<<<<<<< HEAD
             if ((type > BombType.B_TAG)
                 && !allowAdvancedAmmo) {
                 b_choices[type].setEnabled(false);
             }
             if ((type == BombType.B_ASEW) || (type == BombType.B_ALAMO)
                 || (type == BombType.B_TAG)) {
+=======
+            if ((type > BombType.B_TAG) && !allowAdvancedAmmo) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                 b_choices[type].setEnabled(false);
             }
 
@@ -136,6 +177,9 @@ public class BombChoicePanel extends JPanel implements Serializable, ItemListene
             int maxNumBombs = Math.round(availBombPoints
                     / BombType.getBombCost(type))
                     + current[type];
+            if(typeMax != null) {
+                if (maxNumBombs > 0 && maxNumBombs > typeMax[type]) maxNumBombs = typeMax[type];
+            }
             for (int x = 0; x <= maxNumBombs; x++) {
                 b_choices[type].addItem(Integer.toString(x));
             }
@@ -150,8 +194,19 @@ public class BombChoicePanel extends JPanel implements Serializable, ItemListene
             choices[type] = b_choices[type].getSelectedIndex();
         }
 
+<<<<<<< HEAD
         aero.setBombChoices(choices);
 
+=======
+        bomber.setBombChoices(choices);
+    }
+    public int[] getChoice() {
+        int[] choices = new int[BombType.B_NUM];
+        for (int type = 0; type < BombType.B_NUM; type++) {
+            choices[type] = b_choices[type].getSelectedIndex();
+        }
+        return choices;
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
     }
 
     @Override

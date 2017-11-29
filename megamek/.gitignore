@@ -14,6 +14,7 @@
 /*.mul
 /apidocs/
 /mmconf/*.properties
+!/mmconf/shared.properties
 /mmconf/*.properties.bak
 /*.log
 /classes/
@@ -22,6 +23,13 @@
 atlasedImages.txt
 data/images/imgFileAtlasMap.xml
 /userdata/
+<<<<<<< HEAD
 *.pdf
 *.ps
 *.png
+=======
+/*.pdf
+/*.ps
+/*.png
+/MegaMekLab.jar
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek

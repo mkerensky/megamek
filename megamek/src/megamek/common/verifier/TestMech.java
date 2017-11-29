@@ -20,7 +20,14 @@
 package megamek.common.verifier;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Enumeration;
+<<<<<<< HEAD
+=======
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
 import java.util.Map;
 import java.util.Vector;
 import java.util.stream.Collectors;
@@ -31,23 +38,120 @@ import megamek.common.CriticalSlot;
 import megamek.common.Engine;
 import megamek.common.Entity;
 import megamek.common.EquipmentType;
+import megamek.common.ITechManager;
 import megamek.common.LandAirMech;
 import megamek.common.Mech;
 import megamek.common.MiscType;
 import megamek.common.Mounted;
 import megamek.common.QuadMech;
 import megamek.common.QuadVee;
+import megamek.common.SimpleTechLevel;
 import megamek.common.TechConstants;
 import megamek.common.WeaponType;
 import megamek.common.util.StringUtil;
+<<<<<<< HEAD
 import megamek.common.weapons.ACWeapon;
 import megamek.common.weapons.EnergyWeapon;
 import megamek.common.weapons.GaussWeapon;
 import megamek.common.weapons.LBXACWeapon;
 import megamek.common.weapons.PPCWeapon;
 import megamek.common.weapons.UACWeapon;
+=======
+import megamek.common.weapons.artillery.ArtilleryWeapon;
+import megamek.common.weapons.autocannons.ACWeapon;
+import megamek.common.weapons.autocannons.LBXACWeapon;
+import megamek.common.weapons.autocannons.UACWeapon;
+import megamek.common.weapons.gaussrifles.GaussWeapon;
+import megamek.common.weapons.lasers.EnergyWeapon;
+import megamek.common.weapons.ppc.PPCWeapon;
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
 
 public class TestMech extends TestEntity {
+
+    public enum MechJumpJets {
+        JJ_STANDARD ("JumpJet", true, Mech.JUMP_STANDARD),
+        JJ_IMPROVED ("ImprovedJump Jet", false, Mech.JUMP_IMPROVED),
+        JJ_PROTOTYPE ("ISPrototypeJumpJet", true, Mech.JUMP_PROTOTYPE),
+        JJ_PROTOTYPE_IMPROVED ("ISPrototypeImprovedJumpJet", false, Mech.JUMP_PROTOTYPE_IMPROVED),
+        JJ_UMU ("UMU", false, Mech.JUMP_NONE),
+        JJ_BOOSTER ("Mech Mechanical Jump Boosters", true, Mech.JUMP_BOOSTER);
+        
+        private String internalName;
+        private boolean industrial;
+        private int jumpType;
+        
+        MechJumpJets(String internalName, boolean industrial, int jumpType) {
+            this.internalName = internalName;
+            this.industrial = industrial;
+            this.jumpType = jumpType;
+        }
+        
+        public String getName() {
+            return internalName;
+        }
+        
+        public boolean canIndustrialUse() {
+            return industrial;
+        }
+        
+        public int getJumpType() {
+            return jumpType;
+        }
+        
+        public static List<EquipmentType> allJJs(boolean industrialOnly) {
+            List<EquipmentType> retVal = new ArrayList<>();
+            for (MechJumpJets jj : values()) {
+                if (jj.industrial || !industrialOnly) {
+                    retVal.add(EquipmentType.get(jj.internalName));
+                }
+            }
+            return retVal;
+        }
+
+    }
+    
+    /**
+     * Filters all mech armor according to given tech constraints
+     *
+     * @param etype
+     * @param industrial
+     * @param techManager
+     * @return
+     */
+    public static List<EquipmentType> legalArmorsFor(long etype, boolean industrial, ITechManager techManager) {
+        List<EquipmentType> retVal = new ArrayList<>();
+        boolean industrialOnly = industrial
+                && (techManager.getTechLevel().ordinal() < SimpleTechLevel.EXPERIMENTAL.ordinal());
+        boolean isLam = (etype & Entity.ETYPE_LAND_AIR_MECH) != 0;
+        for (int at = 0; at < EquipmentType.armorNames.length; at++) {
+            if ((at == EquipmentType.T_ARMOR_PATCHWORK)
+                    || (isLam && (at == EquipmentType.T_ARMOR_HARDENED))) {
+                continue;
+            }
+            String name = EquipmentType.getArmorTypeName(at, techManager.useClanTechBase());
+            EquipmentType eq = EquipmentType.get(name);
+            if ((null != eq)
+                    && eq.hasFlag(MiscType.F_MECH_EQUIPMENT)
+                    && techManager.isLegal(eq)
+                    && (!isLam || (eq.getCriticals(null) == 0))
+                    && (!industrialOnly || ((MiscType)eq).isIndustrial())) {
+                retVal.add(eq);
+            }
+            if (techManager.useMixedTech()) {
+                name = EquipmentType.getArmorTypeName(at, !techManager.useClanTechBase());
+                EquipmentType eq2 = EquipmentType.get(name);
+                if ((null != eq2) && (eq != eq2)
+                        && eq2.hasFlag(MiscType.F_MECH_EQUIPMENT)
+                        && techManager.isLegal(eq2)
+                        && (!isLam || (eq2.getCriticals(null) == 0))
+                        && (!industrialOnly || ((MiscType)eq).isIndustrial())) {
+                    retVal.add(eq2);
+                }
+            }
+        }
+        return retVal;
+    }
+    
     private Mech mech = null;
 
     public TestMech(Mech mech, TestEntityOption option, String fileString) {
@@ -85,6 +189,22 @@ public class TestMech extends TestEntity {
         }
         return armor;
     }
+    
+    public static Integer maxJumpMP(Mech mech) {
+        if (mech.isSuperHeavy()) {
+            return 0;
+        }
+        if (mech.getJumpType() == Mech.JUMP_BOOSTER) {
+            return null;
+        } else if (!mech.hasEngine() || (!mech.getEngine().isFusion() && (mech.getEngine().getEngineType() != Engine.FISSION))) {
+            return 0;
+        } else if ((mech.getJumpType() == Mech.JUMP_IMPROVED)
+                || (mech.getJumpType() == Mech.JUMP_PROTOTYPE_IMPROVED)) {
+            return (int)Math.ceil(mech.getOriginalWalkMP() * 1.5);
+        } else {
+            return mech.getOriginalWalkMP();
+        }
+    }
 
     @Override
     public Entity getEntity() {
@@ -103,6 +223,16 @@ public class TestMech extends TestEntity {
 
     @Override
     public boolean isAero() {
+        return false;
+    }
+
+    @Override
+    public boolean isSmallCraft() {
+        return false;
+    }
+    
+    @Override
+    public boolean isJumpship() {
         return false;
     }
 
@@ -673,6 +803,9 @@ public class TestMech extends TestEntity {
         if (hasIllegalTechLevels(buff, ammoTechLvl)) {
             correct = false;
         }
+        if (showIncorrectIntroYear() && hasIncorrectIntroYear(buff)) {
+            correct = false;
+        }
         if (hasIllegalEquipmentCombinations(buff)) {
             correct = false;
         }
@@ -689,6 +822,7 @@ public class TestMech extends TestEntity {
         buff.append("Mech: ").append(mech.getDisplayName()).append("\n");
         buff.append("Found in: ").append(fileString).append("\n");
         buff.append(printTechLevel());
+        buff.append("Intro year: ").append(mech.getYear());
         buff.append(printSource());
         buff.append(printShortMovement());
         if (correctWeight(buff, true, true)) {
@@ -990,6 +1124,7 @@ public class TestMech extends TestEntity {
                         || mech.getCockpitType() == Mech.COCKPIT_PRIMITIVE_INDUSTRIAL)
                     && (misc.hasFlag(MiscType.F_TARGCOMP)
                         || misc.hasFlag(MiscType.F_ARTEMIS)
+                        || misc.hasFlag(MiscType.F_ARTEMIS_PROTO)
                         || misc.hasFlag(MiscType.F_ARTEMIS_V)
                         || misc.hasFlag(MiscType.F_BAP))) {
                     buff.append("Industrial mech without advanced fire control can't mount " + misc.getName() + "\n");
@@ -1041,7 +1176,6 @@ public class TestMech extends TestEntity {
             if ((mech.getJumpType() != Mech.JUMP_STANDARD)
                     && (mech.getJumpType() != Mech.JUMP_NONE)
                     && (mech.getJumpType() != Mech.JUMP_PROTOTYPE)
-                    && (mech.getJumpType() != Mech.JUMP_PROTOTYPE_IMPROVED)
                     && (mech.getJumpType() != Mech.JUMP_BOOSTER)) {
                 buff.append("industrial mechs can only mount standard jump jets or mechanical jump boosters\n");
                 illegal = true;
@@ -1243,19 +1377,15 @@ public class TestMech extends TestEntity {
             }
         }
 
-        if (mech.hasWorkingWeapon(WeaponType.F_TASER)) {
-            switch (mech.hasEngine() ? mech.getEngine().getEngineType() : Engine.NONE) {
-                case Engine.FISSION:
-                case Engine.FUEL_CELL:
-                case Engine.COMBUSTION_ENGINE:
-                case Engine.NONE:
-                    buff.append("Mech Taser needs fusion engine\n");
-                    illegal = true;
-                    break;
-                default:
-                    break;
-            }
-        }
+		if (mech.hasWorkingWeapon(WeaponType.F_TASER) && !(mech.hasEngine() && mech.getEngine().isFusion())) {
+			buff.append("Mek Taser needs fusion engine\n");
+			illegal = true;
+		}
+
+		if (mech.hasWorkingWeapon(WeaponType.F_HYPER) && !(mech.hasEngine() && mech.getEngine().isFusion())) {
+			buff.append("RISC Hyper Laser needs fusion engine\n");
+			illegal = true;
+		}
         
         if (mech.hasFullHeadEject()) {
             if ((mech.getCockpitType() == Mech.COCKPIT_TORSO_MOUNTED)

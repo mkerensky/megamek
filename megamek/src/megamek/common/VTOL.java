@@ -17,6 +17,12 @@
  */
 package megamek.common;
 
+<<<<<<< HEAD
+=======
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
 import java.util.Map;
 
 import megamek.common.options.OptionsConstants;
@@ -246,6 +252,58 @@ public class VTOL extends Tank {
     public boolean doomedInAtmosphere() {
         return true;
     }
+<<<<<<< HEAD
+=======
+    
+    @Override
+    public boolean isBomber() {
+        return (game != null)
+                && game.getOptions().booleanOption(OptionsConstants.ADVCOMBAT_TACOPS_VTOL_ATTACKS);
+    }
+    
+    @Override
+    public int availableBombLocation(int cost) {
+        return LOC_FRONT;
+    }
+    
+    public int getMaxBombPoints() {
+        return (int) Math.round(getWeight() / 5);
+    }
+
+    public int[] getBombChoices() {
+        return bombChoices.clone();
+    }
+
+    public void setBombChoices(int[] bc) {
+        if (bc.length == bombChoices.length) {
+            bombChoices = bc;
+        }
+    }
+    
+    @Override
+    public void clearBombChoices() {
+        Arrays.fill(bombChoices, 0);
+    }
+
+    @Override
+    public Targetable getVTOLBombTarget() {
+        return bombTarget;
+    }
+    
+    @Override
+    public void setVTOLBombTarget(Targetable t) {
+        bombTarget = t;
+    }
+    
+    public List<Coords> getStrafingCoords() {
+        return strafingCoords;
+    }
+    
+    @Override
+    public boolean isMakingVTOLGroundAttack() {
+        return bombTarget != null || strafingCoords.size() > 0;
+    }
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
 
     @Override
     public boolean doomedInSpace() {
@@ -594,6 +652,20 @@ public class VTOL extends Tank {
         return Entity.ETYPE_TANK | Entity.ETYPE_VTOL;
     }
 
+    public static TechAdvancement getChinTurretTA() {
+        return new TechAdvancement(TECH_BASE_ALL)
+                .setAdvancement(DATE_PS, 3079, 3080).setApproximate(false, true, false)
+                .setTechRating(RATING_B).setAvailability(RATING_F, RATING_F, RATING_F, RATING_D)
+                .setStaticTechLevel(SimpleTechLevel.EXPERIMENTAL);
+    }
+
+    protected void addSystemTechAdvancement(CompositeTechLevel ctl) {
+        super.addSystemTechAdvancement(ctl);
+        if (!hasNoTurret()) {
+            ctl.addComponent(getChinTurretTA());
+        }
+    }
+    
     /**
      * Used to determine the draw priority of different Entity subclasses.
      * This allows different unit types to always be draw above/below other

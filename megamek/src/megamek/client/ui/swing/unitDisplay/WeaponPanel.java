@@ -70,8 +70,8 @@ import megamek.common.WeaponComparatorRange;
 import megamek.common.WeaponType;
 import megamek.common.options.OptionsConstants;
 import megamek.common.util.MegaMekFile;
-import megamek.common.weapons.BayWeapon;
-import megamek.common.weapons.HAGWeapon;
+import megamek.common.weapons.bayweapons.BayWeapon;
+import megamek.common.weapons.gaussrifles.HAGWeapon;
 import megamek.common.weapons.infantry.InfantryWeapon;
 
 /**
@@ -259,7 +259,8 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
             wn.append(']');
             // determine shots left & total shots left
             if ((wtype.getAmmoType() != AmmoType.T_NA)
-                && !wtype.hasFlag(WeaponType.F_ONESHOT)) {
+                    && (!wtype.hasFlag(WeaponType.F_ONESHOT)
+                            || wtype.hasFlag(WeaponType.F_BA_INDIVIDUAL))) {
                 int shotsLeft = 0;
                 if ((mounted.getLinked() != null)
                     && !mounted.getLinked().isDumping()) {
@@ -1730,6 +1731,15 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
             mediumR = wtype.getWMediumRange();
             longR = wtype.getWLongRange();
             extremeR = wtype.getWExtremeRange();
+        } else if (wtype.hasFlag(WeaponType.F_PDBAY)) {
+        //Point Defense bays have a variable range, depending on the mode they're in
+            if (wtype.hasModes() && mounted.curMode().equals("Point Defense")) {
+                shortR = 1;
+                wShortR.setText("1"); //$NON-NLS-1$
+            } else {
+                shortR = 6;
+                wShortR.setText("1-6"); //$NON-NLS-1$
+            }
         }
         // We need to adjust the ranges for Centurion Weapon Systems: it's
         //  default range is 6/12/18 but that's only for units that are
@@ -1837,8 +1847,11 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
                                                  .elementAt(n));
             wtype = (WeaponType) mounted.getType();
         }
+        
         if (wtype.getAmmoType() == AmmoType.T_NA) {
             m_chAmmo.setEnabled(false);
+        
+        // this is the situation where there's some kind of ammo but it's not changeable
         } else if (wtype.hasFlag(WeaponType.F_ONESHOT)) {
             m_chAmmo.setEnabled(false);
             Mounted mountedAmmo = mounted.getLinked();
@@ -1867,8 +1880,14 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
                     rightBay = oldmount.ammoInBay(entity
                                                           .getEquipmentNum(mountedAmmo));
                 }
+                
+                // covers the situation where a weapon using non-caseless ammo should 
+                // not be able to switch to caseless on the fly and vice versa
+                boolean amCaseless = ((AmmoType) mounted.getLinked().getType()).getMunitionType() == AmmoType.M_CASELESS;
+                boolean etCaseless = ((AmmoType) atype).getMunitionType() == AmmoType.M_CASELESS;
+                boolean caselessMismatch = amCaseless != etCaseless;                
 
-                if (mountedAmmo.isAmmoUsable() && same && rightBay
+                if (mountedAmmo.isAmmoUsable() && same && rightBay && !caselessMismatch
                     && (atype.getAmmoType() == wtype.getAmmoType())
                     && (atype.getRackSize() == wtype.getRackSize())) {
 
@@ -1915,8 +1934,10 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
         ranges[1] = wtype.getWRanges();
         if (atype != null) {
             if ((wtype.getAmmoType() == AmmoType.T_SRM)
+                    || (wtype.getAmmoType() == AmmoType.T_SRM_IMP)
                     || (wtype.getAmmoType() == AmmoType.T_MRM)
                     || (wtype.getAmmoType() == AmmoType.T_LRM)
+                    || (wtype.getAmmoType() == AmmoType.T_LRM_IMP)
                     || (wtype.getAmmoType() == AmmoType.T_MML)) {
                 if (atype.getMunitionType() == AmmoType.M_TORPEDO) {
                     ranges[1] = wtype.getRanges(mounted);
@@ -2166,7 +2187,7 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
                 wMedR.setText("6 - 10"); //$NON-NLS-1$
                 wLongR.setText("11 - 15"); //$NON-NLS-1$
                 wExtR.setText("16 - 20"); //$NON-NLS-1$
-            }
+            }           
         }
 
         // Min range 0 for hotload
@@ -2218,6 +2239,13 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
         wShortAVR.setText(Integer.toString(avShort));
         if (wtype.isCapital()) {
             wShortR.setText("1-12"); //$NON-NLS-1$
+        } else if (wtype.hasFlag(WeaponType.F_PDBAY)) {
+                //Point Defense bays have a variable range too, depending on the mode they're in
+                if (wtype.hasModes() && weapon.curMode().equals("Point Defense")) {
+                    wShortR.setText("1"); //$NON-NLS-1$
+                } else {
+                    wShortR.setText("1-6"); //$NON-NLS-1$
+                }
         } else {
             wShortR.setText("1-6"); //$NON-NLS-1$
         }
@@ -2289,17 +2317,19 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
                 avExt = 0;
             }
         } // end weapon is MML
-        else if ((atype.getAmmoType() == AmmoType.T_LRM)
-                 || (atype.getAmmoType() == AmmoType.T_SRM)) {
+        else if ((atype.getAmmoType() == AmmoType.T_LRM) 
+                || (atype.getAmmoType() == AmmoType.T_LRM_IMP)
+                || (atype.getAmmoType() == AmmoType.T_SRM)
+                || (atype.getAmmoType() == AmmoType.T_SRM_IMP)) {
 
             if (atype.getMunitionType() == AmmoType.M_ARTEMIS_CAPABLE) {
-                if (atype.getAmmoType() == AmmoType.T_LRM) {
+                if ((atype.getAmmoType() == AmmoType.T_LRM) || (atype.getAmmoType() == AmmoType.T_LRM_IMP)) {
                     int bonus = (int) Math.ceil(atype.getRackSize() / 5.0);
                     avShort = avShort + bonus;
                     avMed = avMed + bonus;
                     avLong = avLong + bonus;
                 }
-                if (atype.getAmmoType() == AmmoType.T_SRM) {
+                if ((atype.getAmmoType() == AmmoType.T_SRM) || (atype.getAmmoType() == AmmoType.T_SRM_IMP)) {
                     avShort = avShort + 2;
                 }
             }
@@ -2328,11 +2358,45 @@ public class WeaponPanel extends PicMap implements ListSelectionListener,
                 avMed = 3;
                 avLong = 3;
                 avExt = 3;
+            } else if (atype.hasFlag(AmmoType.F_SANTA_ANNA)) {
+                avShort = 100;
+                avMed = 100;
+                avLong = 100;
+                avExt = 100;
+            } else if (atype.hasFlag(AmmoType.F_PEACEMAKER)) {
+                avShort = 1000;
+                avMed = 1000;
+                avLong = 1000;
+                avExt = 1000;
             } else {
                 avShort = 2;
                 avMed = 2;
                 avLong = 2;
                 avExt = 2;
+            }
+        } else if (atype.getAmmoType() == AmmoType.T_KILLER_WHALE) {
+            if (atype.hasFlag(AmmoType.F_PEACEMAKER)) {
+                avShort = 1000;
+                avMed = 1000;
+                avLong = 1000;
+                avExt = 1000; 
+            } else {
+                avShort = 4;
+                avMed = 4;
+                avLong = 4;
+                avExt = 4;
+            }
+        } else if (atype.getAmmoType() == AmmoType.T_WHITE_SHARK) {
+            if (atype.hasFlag(AmmoType.F_SANTA_ANNA)) {
+                avShort = 100;
+                avMed = 100;
+                avLong = 100;
+                avExt = 100; 
+            } else {
+                avShort = 3;
+                avMed = 3;
+                avLong = 3;
+                avExt = 3;
             }
         }
 

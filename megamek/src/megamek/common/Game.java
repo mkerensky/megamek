@@ -51,9 +51,7 @@ import megamek.common.options.GameOptions;
 import megamek.common.options.OptionsConstants;
 import megamek.common.weapons.AttackHandler;
 import megamek.server.SmokeCloud;
-import megamek.server.victory.SpaghettiVictoryFactory;
 import megamek.server.victory.Victory;
-import megamek.server.victory.VictoryFactory;
 
 /**
  * The game class is the root of all data about the game in progress. Both the
@@ -165,7 +163,6 @@ public class Game implements Serializable, IGame {
 
     // victory condition related stuff
     private Victory victory = null;
-    private VictoryFactory vf = new SpaghettiVictoryFactory();
 
     // smoke clouds
     private List<SmokeCloud> smokeCloudList = new CopyOnWriteArrayList<>();
@@ -799,6 +796,9 @@ public class Game implements Serializable, IGame {
                 resetActions();
                 break;
             case PHASE_PHYSICAL:
+                resetActions();
+                break;
+            case PHASE_DEPLOYMENT:
                 resetActions();
                 break;
             case PHASE_INITIATIVE:
@@ -1693,6 +1693,24 @@ public class Game implements Serializable, IGame {
             }
         });
     }
+    
+    /**
+     * Returns an <code>Enumeration</code> of all active enemy entities.
+     *
+     * @param currentEntity
+     *            the <code>Entity</code> whose enemies are needed.
+     * @return an <code>Enumeration</code> of <code>Entity</code>s at the given
+     *         coordinates who are enemies of the given unit.
+     */
+    public Iterator<Entity> getAllEnemyEntities(final Entity currentEntity) {
+    	return getSelectedEntities(new EntitySelector() {
+    		private Entity friendly = currentEntity;
+    		
+    		public boolean accept(Entity entity) {
+    			return entity.isTargetable() && entity.isEnemyOf(friendly);
+    		}
+    	});
+    }
 
     /**
      * Returns an <code>Enumeration</code> of friendly active entities at the
@@ -1887,13 +1905,6 @@ public class Game implements Serializable, IGame {
         return -1;
     }
 
-    /**
-     * Returns the number of the first deployable entity
-     */
-    public int getFirstDeployableEntityNum() {
-        return getFirstDeployableEntityNum(getTurn());
-    }
-
     public int getFirstDeployableEntityNum(GameTurn turn) {
         // Repeat the logic from getFirstEntityNum.
         if (turn == null) {
@@ -1906,13 +1917,6 @@ public class Game implements Serializable, IGame {
             }
         }
         return -1;
-    }
-
-    /**
-     * Returns the number of the next deployable entity
-     */
-    public int getNextDeployableEntityNum(int entityId) {
-        return getNextDeployableEntityNum(getTurn(), entityId);
     }
 
     public int getNextDeployableEntityNum(GameTurn turn, int start) {
@@ -3226,6 +3230,10 @@ public class Game implements Serializable, IGame {
      * well as other light sources.
      */
     public int isPositionIlluminated(Coords c) {
+    	// fix for NPE when recovering spacecraft while in visual range of enemy
+    	if (getBoard().inSpace()) {
+    		return ILLUMINATED_NONE;
+    	}
         // Flares happen first, because they totally negate nighttime penalties
         for (Flare flare : flares) {
             if (flare.illuminates(c)) {
@@ -3323,15 +3331,8 @@ public class Game implements Serializable, IGame {
                 .intOption(OptionsConstants.VICTORY_GAME_TURN_LIMIT)));
     }
 
-    /**
-     * use victoryfactory to generate a new victorycondition checker provided
-     * that the victorycontext is saved properly, calling this method at any
-     * time is ok and should not affect anything unless the
-     * victorycondition-configoptions have changed.
-     */
     public void createVictoryConditions() {
-        victory = vf
-                .createVictory("this string should be taken from game options");
+        victory = new Victory(getOptions());
     }
 
     public Victory getVictory() {

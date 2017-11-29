@@ -20,11 +20,17 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import megamek.client.ui.SharedUtility;
+<<<<<<< HEAD
 import megamek.common.Aero;
 import megamek.common.Infantry;
+=======
+import megamek.common.BombType;
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
 import megamek.common.Building;
 import megamek.common.Compute;
 import megamek.common.Coords;
@@ -47,6 +53,8 @@ public abstract class PathRanker {
         owner = princess;
     }
 
+    private Map<MovePath.Key, Double> pathSuccessProbabilities = new HashMap<MovePath.Key, Double>();
+    
     /**
      * Gives the "utility" of a path; a number representing how good it is.
      * Rankers that extend this class should override this function
@@ -67,7 +75,7 @@ public abstract class PathRanker {
                                List<Entity> enemies, Coords friendsCoords);
 
     ArrayList<RankedPath> rankPaths(List<MovePath> movePaths, IGame game, int maxRange,
-                                    double fallTollerance, int startingHomeDistance,
+                                    double fallTolerance, int startingHomeDistance,
                                     List<Entity> enemies, List<Entity> friends) {
         final String METHOD_NAME = "rankPaths(ArrayList<MovePath>, IGame)";
         getOwner().methodBegin(getClass(), METHOD_NAME);
@@ -78,8 +86,11 @@ public abstract class PathRanker {
                 return new ArrayList<>();
             }
 
+            // the cached path probability data is really only relevant for one iteration through this method
+            pathSuccessProbabilities.clear();
+            
             // Let's try to whittle down this list.
-            List<MovePath> validPaths = validatePaths(movePaths, game, maxRange, fallTollerance, startingHomeDistance);
+            List<MovePath> validPaths = validatePaths(movePaths, game, maxRange, fallTolerance, startingHomeDistance);
             getOwner().log(getClass(), METHOD_NAME, LogLevel.DEBUG, "Validated " + validPaths.size() + " out of " +
                                                                movePaths.size() + " possible paths.");
 
@@ -91,7 +102,7 @@ public abstract class PathRanker {
             BigDecimal interval = new BigDecimal(5);
             for (MovePath path : validPaths) {
                 count = count.add(BigDecimal.ONE);
-                returnPaths.add(rankPath(path, game, maxRange, fallTollerance, startingHomeDistance, enemies,
+                returnPaths.add(rankPath(path, game, maxRange, fallTolerance, startingHomeDistance, enemies,
                                          allyCenter));
                 BigDecimal percent = count.divide(numberPaths, 2, RoundingMode.DOWN).multiply(new BigDecimal(100))
                                           .round(new MathContext(0, RoundingMode.DOWN));
@@ -120,11 +131,14 @@ public abstract class PathRanker {
 
         Entity mover = startingPathList.get(0).getEntity();
 
+<<<<<<< HEAD
         // No support yet for Aero units.
         if (mover instanceof Aero) {
             return startingPathList;
         }
 
+=======
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
         Targetable closestTarget = findClosestEnemy(mover, mover.getPosition(), game);
         int startingTargetDistance = (closestTarget == null ?
                                       Integer.MAX_VALUE :
@@ -140,10 +154,28 @@ public abstract class PathRanker {
             startingPathList.add(new MovePath(game, mover)); //If we can't move and still fire, we want to consider not moving.
         }
 
+        boolean isAirborneAeroOnAtmosphericGroundMap = mover.isAirborne() && mover.isOnAtmosphericGroundMap();
+        
         for (MovePath path : startingPathList) {
+            // just in case
+            if(path == null) {
+                continue;
+            }
+            
             StringBuilder msg = new StringBuilder("Validating Path: ").append(path.toString());
 
             try {
+                // if we are an aero unit on the ground map, we want to discard paths that keep us at altitude 1 with no bombs
+            	if(isAirborneAeroOnAtmosphericGroundMap) {
+            		// if we have no bombs, we want to make sure our altitude is above 1
+            		// if we do have bombs, we may consider altitude bombing (in the future)
+            		if((path.getEntity().getBombs(BombType.F_GROUND_BOMB).size() == 0) &&
+            		        (path.getFinalAltitude() < 2)) {
+            		    msg.append("\n\tNo bombs but at altitude 1. No way.");
+            		    continue;
+            		}
+            	}
+            	
                 Coords finalCoords = path.getFinalCoords();
 
                 // If fleeing, skip any paths that don't get me closer to home.
@@ -154,11 +186,14 @@ public abstract class PathRanker {
                 }
 
                 // Make sure I'm trying to get/stay in range of a target.
-                Targetable closestToEnd = findClosestEnemy(mover, finalCoords, game);
-                String validation = validRange(finalCoords, closestToEnd, startingTargetDistance, maxRange, inRange);
-                if (!StringUtil.isNullOrEmpty(validation)) {
-                    msg.append("\n\t").append(validation);
-                    continue;
+                // Skip this part if I'm an aero on the ground map, as it's kind of irrelevant
+                if(!isAirborneAeroOnAtmosphericGroundMap) {
+                    Targetable closestToEnd = findClosestEnemy(mover, finalCoords, game);
+                    String validation = validRange(finalCoords, closestToEnd, startingTargetDistance, maxRange, inRange);
+                    if (!StringUtil.isNullOrEmpty(validation)) {
+                        msg.append("\n\t").append(validation);
+                        continue;
+                    }
                 }
 
                 // Don't move on/through buildings that will not support our weight.
@@ -179,7 +214,6 @@ public abstract class PathRanker {
                 // If all the above checks have passed, this is a valid path.
                 msg.append("\n\tVALID.");
                 returnPaths.add(path);
-
             } finally {
                 getOwner().log(getClass(), METHOD_NAME, logLevel, msg.toString());
             }
@@ -229,7 +263,13 @@ public abstract class PathRanker {
             List<Entity> enemies = getOwner().getEnemyEntities();
             for (Entity e : enemies) {
                 // Skip airborne aero units as they're further away than they seem and hard to catch.
+<<<<<<< HEAD
                 if (e instanceof Aero && e.isAirborne()) {
+=======
+                // Also, skip withdrawing enemy bot units, to avoid humping disabled tanks and ejected mechwarriors
+                if (e.isAero() && e.isAirborne() || 
+                        getOwner().getHonorUtil().isEnemyBroken(e.getTargetId(), e.getOwnerId(), getOwner().getForcedWithdrawal())) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                     continue;
                 }
 
@@ -254,6 +294,11 @@ public abstract class PathRanker {
      * Returns the probability of success of a movepath
      */
     public double getMovePathSuccessProbability(MovePath movePath, StringBuilder msg) {
+        // introduced a caching mechanism, as the success probability was being calculated at least twice
+        if(pathSuccessProbabilities.containsKey(movePath.getKey())) {
+            return pathSuccessProbabilities.get(movePath.getKey());
+        }
+        
         MovePath pathCopy = movePath.clone();
         List<TargetRoll> pilotingRolls = getPSRList(pathCopy);
         double successProbability = 1.0;
@@ -291,6 +336,8 @@ public abstract class PathRanker {
         }
         msg.append("\n\t\tTotal = ").append(NumberFormat.getPercentInstance().format(successProbability));
 
+        pathSuccessProbabilities.put(movePath.getKey(), successProbability);
+        
         return successProbability;
     }
 

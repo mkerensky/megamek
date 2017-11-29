@@ -19,7 +19,8 @@ package megamek.common.options;
  * @since 2/21/14 7:57 AM
  */
 public class OptionsConstants {
-     
+
+    public static final String QUIRK_POS_ANIMALISTIC = "animalistic"; //$NON-NLS-1$
     public static final String QUIRK_POS_ANTI_AIR = "anti_air"; //$NON-NLS-1$
     public static final String QUIRK_POS_ATMO_FLYER= "atmo_flyer"; //$NON-NLS-1$
     public static final String QUIRK_POS_BARREL_FIST_LA = "barrel_fists_la"; //$NON-NLS-1$
@@ -71,7 +72,8 @@ public class OptionsConstants {
     public static final String QUIRK_POS_VAR_RNG_TARG_L = "variable_range_long"; //$NON-NLS-1$
     public static final String QUIRK_POS_VAR_RNG_TARG_S = "variable_range_short"; //$NON-NLS-1$
     //TODO Game Rules
-    public static final String QUIRK_POS_VERSTIGAL_HANDS = "vestigial_hands"; //$NON-NLS-1$
+    public static final String QUIRK_POS_VESTIGIAL_HANDS_LA = "vestigial_hands_la"; //$NON-NLS-1$
+    public static final String QUIRK_POS_VESTIGIAL_HANDS_RA = "vestigial_hands_ra"; //$NON-NLS-1$
     public static final String QUIRK_POS_VTOL_ROTOR= "vtol_rotor"; //$NON-NLS-1$
     
     public static final String QUIRK_WEAP_POS_ACCURATE = "accurate"; //$NON-NLS-1$
@@ -89,6 +91,7 @@ public class OptionsConstants {
     public static final String QUIRK_NEG_CRAMPED_COCKPIT= "cramped_cockpit"; //$NON-NLS-1$
     public static final String QUIRK_NEG_DIFFICULT_EJECT= "difficult_eject"; //$NON-NLS-1$
     public static final String QUIRK_NEG_DIFFICULT_MAINTAIN= "difficult_maintain"; //$NON-NLS-1$
+    public static final String QUIRK_NEG_EM_INTERFERENCE_WHOLE= "em_inter_whole"; //$NON-NLS-1$
     public static final String QUIRK_NEG_EXP_ACTUATOR= "exp_actuator"; //$NON-NLS-1$
     public static final String QUIRK_NEG_FLAWED_COOLING= "flawed_cooling"; //$NON-NLS-1$
     public static final String QUIRK_NEG_FRAGILE_FUEL= "fragile_fuel"; //$NON-NLS-1$
@@ -132,12 +135,15 @@ public class OptionsConstants {
     public static final String QUIRK_WEAP_NEG_NON_FUNCTIONAL = "non_functional"; //$NON-NLS-1$
     public static final String QUIRK_WEAP_NEG_POOR_COOLING = "poor_cooling"; //$NON-NLS-1$
     public static final String QUIRK_WEAP_NEG_STATIC_FEED = "static_feed"; //$NON-NLS-1$
+    //Technically, these are partial repairs, not quirks, but I don't think we need to iterate 
+    //through all the weapons on both the quirk and partial repairs tabs just to add these.
+    public static final String QUIRK_WEAP_NEG_MISREPAIRED = "misrepaired_weapon"; //$NON-NLS-1$
+    public static final String QUIRK_WEAP_NEG_MISREPLACED = "misreplaced_weapon"; //$NON-NLS-1$
 
     // PILOTING SKILLS
     public static final String PILOT_APTITUDE_GUNNERY = "aptitude_gunnery"; //$NON-NLS-1$
     public static final String PILOT_APTITUDE_PILOTING = "aptitude_piloting"; //$NON-NLS-1$
-    // public static final String PILOT_ANIMAL_MIMIC= "animal_mimic";
-    // //$NON-NLS$
+    public static final String PILOT_ANIMAL_MIMIC= "animal_mimic"; //$NON-NLS$
     // public static final String PILOT_CROSS_COUNTRY= "cross_country";
     // //$NON-NLS$
     public static final String PILOT_DODGE_MANEUVER = "dodge_maneuver"; // $NON-NLS$
@@ -159,6 +165,10 @@ public class OptionsConstants {
     // public static final String PILOT_STAND_ASIDE= "stand_aside"; //$NON-NLS$
     // public static final String PILOT_SWORDSMAN= "swordsman"; //$NON-NLS$
     // public static final String PILOT_TM_= "tm_"; //$NON-NLS$
+    public static final String PILOT_TM_FOREST_RANGER= "tm_forest_ranger"; //$NON-NLS$
+    public static final String PILOT_TM_FROGMAN= "tm_frogman"; //$NON-NLS$
+    public static final String PILOT_TM_MOUNTAINEER= "tm_mountaineer"; //$NON-NLS$
+    public static final String PILOT_TM_SWAMP_BEAST= "tm_swamp_beast"; //$NON-NLS$
     // public static final String PILOT_WIND_WALKER= "wind_walker"; //$NON-NLS$
     // public static final String PILOT_ZWEIHANDER= "zweihander"; //$NON-NLS$
 
@@ -298,6 +308,7 @@ public class OptionsConstants {
     public static final String ALLOWED_CANON_ONLY= "canon_only";  //$NON-NLS$
     public static final String ALLOWED_YEAR= "year";  //$NON-NLS$
     public static final String ALLOWED_TECHLEVEL= "techlevel";  //$NON-NLS$
+    public static final String ALLOWED_ERA_BASED = "era_based"; //$NON_NLS$
     public static final String ALLOWED_ALLOW_ILLEGAL_UNITS= "allow_illegal_units";  //$NON-NLS$
     public static final String ALLOWED_CLAN_IGNORE_EQ_LIMITS= "clan_ignore_eq_limits";  //$NON-NLS$
     public static final String ALLOWED_NO_CLAN_PHYSICAL= "no_clan_physical";  //$NON-NLS$
@@ -456,6 +467,7 @@ public class OptionsConstants {
     public static final String ADVAERORULES_AMMO_EXPLOSIONS= "ammo_explosions";  //$NON-NLS$
     public static final String ADVAERORULES_STRATOPS_AA_FIRE= "stratops_aa_fire";  //$NON-NLS$
     public static final String ADVAERORULES_STRATOPS_AAA_LASER= "stratops_aaa_laser";  //$NON-NLS$
+    public static final String ADVAERORULES_STRATOPS_ADV_POINTDEF= "stratops_adv_pointdef";  //$NON-NLS$
     public static final String ADVAERORULES_STRATOPS_BRACKET_FIRE= "stratops_bracket_fire";  //$NON-NLS$
     public static final String ADVAERORULES_STRATOPS_ECM= "stratops_ecm";  //$NON-NLS$
     public static final String ADVAERORULES_STRATOPS_SENSOR_SHADOW= "stratops_sensor_shadow";  //$NON-NLS$

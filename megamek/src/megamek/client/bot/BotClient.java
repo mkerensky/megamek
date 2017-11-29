@@ -124,6 +124,11 @@ public abstract class BotClient extends Client {
                     );
                     worker.start();
                 }
+                
+                // unloading "stranded" units happens as part of a game turn change, so that's where we do it.
+                if(canUnloadStranded()) {
+                    sendUnloadStranded(getStrandedEntities());
+                }
             }
 
             @Override
@@ -214,6 +219,32 @@ public abstract class BotClient extends Client {
 
     protected abstract void checkMoral();
 
+    /**
+     * Helper function that determines which of this bot's entities are stranded inside immobilized transports. 
+     * @return Array of entity IDs.
+     */
+    public int[] getStrandedEntities() {
+        List<Integer> entitiesToUnload = new ArrayList<>();
+        
+        // Basically, we loop through all entities owned by the current player
+        // And if the entity happens to be in a disabled transport, then we unload it
+        // For future development, consider not unloading a particular entity if doing so would kill it.
+        for(Entity currentEntity : getGame().getPlayerEntities(getLocalPlayer(), true)) {
+            Entity transport = currentEntity.getTransportId() != Entity.NONE ? game.getEntity(currentEntity.getTransportId()) : null;
+            
+            if(transport != null && transport.isPermanentlyImmobilized(true)) {
+                entitiesToUnload.add(currentEntity.getId());
+            }
+        }
+        
+        int[] entityIDs = new int[entitiesToUnload.size()];
+        for(int x = 0; x < entitiesToUnload.size(); x++) {
+            entityIDs[x] = entitiesToUnload.get(x);
+        }
+        
+        return entityIDs;
+    }
+    
     public List<Entity> getEntitiesOwned() {
         ArrayList<Entity> result = new ArrayList<>();
         for (Entity entity : game.getEntitiesVector()) {
@@ -476,7 +507,7 @@ public abstract class BotClient extends Client {
         return null;
     }
 
-    protected List<Coords> getStartingCoordsArray() {
+    protected List<Coords> getStartingCoordsArray(Entity deployed_ent) {
         int highest_elev, lowest_elev, weapon_count;
         double av_range, ideal_elev;
         double adjusted_damage, max_damage, total_damage;
@@ -484,7 +515,6 @@ public abstract class BotClient extends Client {
         Coords highestHex;
         List<RankedCoords> validCoords = new LinkedList<>();
         Vector<Entity> valid_attackers;
-        Entity deployed_ent = getEntity(game.getFirstDeployableEntityNum());
         WeaponAttackAction test_attack;
         List<ECMInfo> allECMInfo = ComputeECM.computeAllEntitiesECMInfo(game
                 .getEntitiesVector());

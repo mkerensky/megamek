@@ -16,6 +16,7 @@ package megamek.common;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
@@ -29,9 +30,9 @@ import java.util.Vector;
 
 import megamek.common.MovePath.MoveStepType;
 import megamek.common.options.OptionsConstants;
-import megamek.common.weapons.BayWeapon;
-import megamek.common.weapons.EnergyWeapon;
-import megamek.common.weapons.PPCWeapon;
+import megamek.common.weapons.bayweapons.BayWeapon;
+import megamek.common.weapons.lasers.EnergyWeapon;
+import megamek.common.weapons.ppc.PPCWeapon;
 
 /**
  * Taharqa's attempt at creating an Aerospace entity
@@ -169,6 +170,7 @@ public class Aero extends Entity {
 
     // fuel - number of fuel points
     private int fuel = 0;
+    private int currentfuel = 0;
 
     // these are used by more advanced aeros
     private boolean lifeSupport = true;
@@ -222,10 +224,74 @@ public class Aero extends Entity {
         // need to set altitude to something different than entity
         altitude = 5;
     }
+    
+    protected static final TechAdvancement TA_ASF = new TechAdvancement(TECH_BASE_ALL)
+            .setAdvancement(DATE_NONE, 2470, 2490).setProductionFactions(F_TH)
+            .setTechRating(RATING_D).setAvailability(RATING_C, RATING_E, RATING_D, RATING_C)
+            .setStaticTechLevel(SimpleTechLevel.STANDARD);
+    protected static final TechAdvancement TA_ASF_PRIMITIVE = new TechAdvancement(TECH_BASE_IS)
+            .setISAdvancement(DATE_ES, 2200, DATE_NONE, 2520)
+            .setISApproximate(false, true, false).setProductionFactions(F_TA)
+            .setTechRating(RATING_D).setAvailability(RATING_D, RATING_X, RATING_F, RATING_F)
+            .setStaticTechLevel(SimpleTechLevel.ADVANCED);
 
+    @Override
+    public TechAdvancement getConstructionTechAdvancement() {
+        if (isPrimitive()) {
+            return TA_ASF_PRIMITIVE;
+        } else {
+            return TA_ASF;
+        }
+    }
+    
+    protected static final TechAdvancement[] COCKPIT_TA = {
+            new TechAdvancement(TECH_BASE_ALL).setAdvancement(2460, 2470, 2491)
+                .setApproximate(true, false, false).setPrototypeFactions(F_TH)
+                .setPrototypeFactions(F_TH).setTechRating(RATING_C)
+                .setAvailability(RATING_C, RATING_C, RATING_C, RATING_C)
+                .setStaticTechLevel(SimpleTechLevel.STANDARD), //Standard            
+            new TechAdvancement(TECH_BASE_IS).setISAdvancement(3065, 3070, 3080)
+                .setClanAdvancement(DATE_NONE, DATE_NONE, 3080)
+                .setISApproximate(true, false, false).setPrototypeFactions(F_WB)
+                .setPrototypeFactions(F_WB, F_CSR).setTechRating(RATING_E)
+                .setAvailability(RATING_X, RATING_X, RATING_E, RATING_D)
+                .setStaticTechLevel(SimpleTechLevel.STANDARD), //Small            
+            new TechAdvancement(TECH_BASE_ALL).setISAdvancement(2625, 2631, DATE_NONE, 2850, 3030)
+                .setISApproximate(true, false, false, true, true)
+                .setClanAdvancement(2625, 2631).setClanApproximate(true, false)
+                .setClanApproximate(true, false).setPrototypeFactions(F_TH)
+                .setPrototypeFactions(F_TH).setReintroductionFactions(F_FS).setTechRating(RATING_D)
+                .setAvailability(RATING_C, RATING_F, RATING_E, RATING_D)
+                .setStaticTechLevel(SimpleTechLevel.ADVANCED), //Cockpit command console
+            new TechAdvancement(TECH_BASE_ALL).setAdvancement(DATE_ES, 2300, DATE_NONE, 2520)
+                .setISApproximate(false, true, false, false)
+                .setPrototypeFactions(F_TA).setTechRating(RATING_C)
+                .setAvailability(RATING_D, RATING_X, RATING_X, RATING_F)
+                .setStaticTechLevel(SimpleTechLevel.STANDARD), //Primitive            
+    };
+    
+    public static TechAdvancement getCockpitTechAdvancement(int cockpitType) {
+        if (cockpitType >= 0 && cockpitType < COCKPIT_TA.length) {
+            return new TechAdvancement(COCKPIT_TA[cockpitType]);
+        }
+        return null;
+    }
+    
+    public TechAdvancement getCockpitTechAdvancement() {
+        return getCockpitTechAdvancement(getCockpitType());
+    }
+    
+    @Override
+    protected void addSystemTechAdvancement(CompositeTechLevel ctl) {
+        super.addSystemTechAdvancement(ctl);
+        if (getCockpitTechAdvancement() != null) {
+            ctl.addComponent(getCockpitTechAdvancement());
+        }        
+    }
+    
     /**
      * Returns this entity's safe thrust, factored for heat, extreme
-     * temperatures, gravity, and bomb load.
+     * temperatures, gravity, partial repairs and bomb load.
      */
     @Override
     public int getWalkMP(boolean gravity, boolean ignoreheat, boolean ignoremodulararmor) {
@@ -252,6 +318,10 @@ public class Aero extends Entity {
         if (hasModularArmor()) {
             j--;
         }
+        // partially repaired engine
+        if (getPartialRepairs().booleanOption("aero_engine_crit")) {
+        	j--;
+        }
 
         // if they are not airborne, then they get MP halved (aerodyne) or no MP
         if (!isAirborne()) {
@@ -265,7 +335,7 @@ public class Aero extends Entity {
     }
 
     /**
-     * Thi is the same as getWalkMP, but does not divide by 2 when grounded
+     * This is the same as getWalkMP, but does not divide by 2 when grounded
      *
      * @return
      */
@@ -389,6 +459,11 @@ public class Aero extends Entity {
         if (bc.length == bombChoices.length) {
             bombChoices = bc;
         }
+    }
+    
+    @Override
+    public void clearBombChoices() {
+        Arrays.fill(bombChoices, 0);
     }
 
     public void setWhoFirst() {
@@ -526,6 +601,9 @@ public class Aero extends Entity {
     }
 
     public void setCICHits(int hits) {
+        if (hits > 3) {
+            hits = 3;
+        }
         cicHits = hits;
     }
 
@@ -566,6 +644,53 @@ public class Aero extends Entity {
         gearHit = hit;
     }
 
+<<<<<<< HEAD
+=======
+    /**
+     * Modifier to landing or vertical takeoff roll for landing gear damage.
+     *
+     * @param vTakeoff
+     *            true if this is for a vertical takeoff, false if for a landing
+     * @return the control roll modifier
+     */
+    @Override
+    public int getLandingGearMod(boolean vTakeoff) {
+        if (gearHit) {
+            return vTakeoff ? 1 : 5;
+        } else {
+        	return 0;
+        }
+    }
+    
+    //Landing mods for partial repairs
+    public int getLandingGearPartialRepairs() {
+    	if (getPartialRepairs().booleanOption("aero_gear_crit")) {
+        return 2;
+    	} else if (getPartialRepairs().booleanOption("aero_gear_replace")) {
+        return 1;
+    	} else {
+    	return 0;
+    	}
+    }
+    
+    //Avionics mods for partial repairs
+    public int getAvionicsMisreplaced() {
+    	if (getPartialRepairs().booleanOption("aero_avionics_replace")) {
+        return 1;
+    	} else {
+    	return 0;
+    	}
+    }
+    
+    public int getAvionicsMisrepaired() {
+    	if (getPartialRepairs().booleanOption("aero_avionics_crit")) {
+        return 1;
+    	} else {
+    	return 0;
+    	}
+    }
+
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
     public void setOHeatSinks(int hs) {
         heatSinksOriginal = hs;
     }
@@ -615,7 +740,21 @@ public class Aero extends Entity {
     }
 
     public int getFuel() {
-        return fuel;
+        if ((getPartialRepairs().booleanOption("aero_asf_fueltank_crit"))
+        		|| (getPartialRepairs().booleanOption("aero_fueltank_crit"))) {
+        	return (int) (fuel * 0.9);
+        } else {
+        	return fuel;
+        }
+    }
+    
+    public int getCurrentFuel() {
+        if ((getPartialRepairs().booleanOption("aero_asf_fueltank_crit"))
+            	|| (getPartialRepairs().booleanOption("aero_fueltank_crit"))) {
+            return (int) (currentfuel * 0.9);
+        } else {
+        	return currentfuel;
+        }
     }
 
     /**
@@ -624,8 +763,14 @@ public class Aero extends Entity {
      */
     public void setFuel(int gas) {
         fuel = gas;
+        currentfuel = gas;
+    }
+    
+    public void setCurrentFuel(int gas) {
+    	currentfuel = gas;
     }
 
+<<<<<<< HEAD
     public double getFuelPointsPerTon(){
         if (getEntityType() == Entity.ETYPE_CONV_FIGHTER){
             return 160;
@@ -661,7 +806,13 @@ public class Aero extends Entity {
             return 80;
         } else { // Entity.ETYPE_AERO
             return 80;
+=======
+    public double getFuelPointsPerTon() {
+        if (isPrimitive()) {
+            return 80 * primitiveFuelFactor();
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
         }
+        return 80;
     }
 
     /**
@@ -681,6 +832,25 @@ public class Aero extends Entity {
      */
     public double getFuelTonnage(){
         return fuel / getFuelPointsPerTon();
+    }
+
+    /**
+     * Used by SmallCraft and Jumpship and their child classes.
+     * 
+     * @return The tons of fuel burned in a day at 1G using strategic movement.
+     */
+    public double getStrategicFuelUse() {
+        return 0.0;
+    }
+    
+    /**
+     * Some primitve aerospace units have their fuel efficiency reduced by a factor based
+     * on construction year.
+     * 
+     * @return The primitive fuel factor for the build year.
+     */
+    public double primitiveFuelFactor() {
+        return 1.0;
     }
 
     public int getHeatType() {
@@ -1206,6 +1376,7 @@ public class Aero extends Entity {
             // total armor points
 
             switch (getArmorType(loc)) {
+<<<<<<< HEAD
                 case EquipmentType.T_ARMOR_COMMERCIAL:
                     armorMultiplier = 0.5;
                     break;
@@ -1225,6 +1396,27 @@ public class Aero extends Entity {
                 default:
                     armorMultiplier = 1.0;
                     break;
+=======
+            case EquipmentType.T_ARMOR_COMMERCIAL:
+                armorMultiplier = 0.5;
+                break;
+            case EquipmentType.T_ARMOR_HARDENED:
+                armorMultiplier = 2.0;
+                break;
+            case EquipmentType.T_ARMOR_REACTIVE:
+            case EquipmentType.T_ARMOR_REFLECTIVE:
+            case EquipmentType.T_ARMOR_BALLISTIC_REINFORCED:
+                armorMultiplier = 1.5;
+                break;
+            case EquipmentType.T_ARMOR_LC_LAMELLOR_FERRO_CARBIDE:
+            case EquipmentType.T_ARMOR_FERRO_LAMELLOR:
+            case EquipmentType.T_ARMOR_ANTI_PENETRATIVE_ABLATION:
+                armorMultiplier = 1.2;
+                break;
+            default:
+                armorMultiplier = 1.0;
+                break;
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
             }
 
             if (blueShield) {
@@ -1483,10 +1675,17 @@ public class Aero extends Entity {
             }
 
             // RACs, LACs and ACs don't really count
+<<<<<<< HEAD
             if ((etype instanceof WeaponType)
                     && ((((WeaponType) etype).getAmmoType() == AmmoType.T_AC_ROTARY)
                             || (((WeaponType) etype).getAmmoType() == AmmoType.T_AC) || (((WeaponType) etype)
                             .getAmmoType() == AmmoType.T_LAC))) {
+=======
+            if ((etype instanceof WeaponType) && ((((WeaponType) etype).getAmmoType() == AmmoType.T_AC_ROTARY)
+                    || (((WeaponType) etype).getAmmoType() == AmmoType.T_AC)
+                    || (((WeaponType) etype).getAmmoType() == AmmoType.T_AC_IMP)
+                    || (((WeaponType) etype).getAmmoType() == AmmoType.T_LAC))) {
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                 toSubtract = 0;
             }
 
@@ -1843,6 +2042,14 @@ public class Aero extends Entity {
                     name = name.concat(" with Artemis V");
                 }
                 if ((mLinker.getType() instanceof MiscType)
+<<<<<<< HEAD
+=======
+                        && mLinker.getType().hasFlag(MiscType.F_ARTEMIS_PROTO)) {
+                    dBV *= 1.1;
+                    name = name.concat(" with Artemis IV Prototype");
+                }
+                if ((mLinker.getType() instanceof MiscType)
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
                         && mLinker.getType().hasFlag(MiscType.F_APOLLO)) {
                     dBV *= 1.15;
                     name = name.concat(" with Apollo");
@@ -2418,6 +2625,7 @@ public class Aero extends Entity {
     public PilotingRollData addEntityBonuses(PilotingRollData prd) {
         // this is a control roll. Affected by:
         // avionics damage
+    	// partial repairs
         // pilot damage
         // current velocity
         int avihits = getAvionicsHits();
@@ -2432,7 +2640,17 @@ public class Aero extends Entity {
         if (avihits >= 3) {
             prd.addModifier(5, "Avionics Destroyed");
         }
-
+        
+        // partial repairs to avionics system, but only if the avionics aren't already destroyed
+        if ((getPartialRepairs() != null) && (avihits < 3)) {
+            if (getPartialRepairs().booleanOption("aero_avionics_crit")) {
+                prd.addModifier(1, "Partial repair of Avionics");
+            }
+            if (getPartialRepairs().booleanOption("aero_avionics_replace")) {
+                prd.addModifier(1, "Misreplaced Avionics");
+            }
+        }
+        
         if (pilothits > 0) {
             prd.addModifier(pilothits, "Pilot Hits");
         }
@@ -2558,7 +2776,7 @@ public class Aero extends Entity {
     }
 
     /**
-     * Tanks don't have MASC
+     * Fighters don't have MASC
      */
     @Override
     public int getRunMPwithoutMASC(boolean gravity, boolean ignoreheat, boolean ignoremodulararmor) {
@@ -2664,7 +2882,7 @@ public class Aero extends Entity {
 
     @Override
     public boolean canCharge() {
-        // ramming is resolved differently than chargin
+        // ramming is resolved differently than charging
         return false;
     }
 
@@ -3406,10 +3624,11 @@ public class Aero extends Entity {
 
     @Override
     public boolean isLocationProhibited(Coords c, int currElevation) {
-        IHex hex = game.getBoard().getHex(c);
-        if (hex.containsTerrain(Terrains.IMPASSABLE)) {
-            return !isAirborne();
+        if (isAirborne()) {
+            return false;
         }
+
+        IHex hex = game.getBoard().getHex(c);
 
         // Additional restrictions for hidden units
         if (isHidden()) {
@@ -4280,7 +4499,28 @@ public class Aero extends Entity {
             }
             toReturn += "Right Thruster (" + getRightThrustHits() + ")";
             first = false;
+<<<<<<< HEAD
         }        
+=======
+        }
+        // Cargo bays and bay doors for large craft
+        for (Bay next : getTransportBays()) {
+        	if (next.getBayDamage() > 0) {
+        		if (!first) {
+        			toReturn += ", ";
+        		}
+        	toReturn += next.getType() + " Bay # " + next.getBayNumber();
+        	first = false;
+        	}
+        	if (next.getCurrentDoors() < next.getDoors()) {
+        		if (!first) {
+        			toReturn += ", ";
+        		}
+        	toReturn += next.getType() + " Bay #" + next.getBayNumber() + " Doors (" + (next.getDoors() - next.getCurrentDoors()) + ")";
+        	first = false;
+        	}
+        }
+>>>>>>> branch 'master' of https://github.com/MegaMek/megamek
         return toReturn;
     }
 
@@ -4303,6 +4543,14 @@ public class Aero extends Entity {
         }
         if ((getCrew() != null) && (getCrew().getHits() >= 4)) {
             System.out.println( msg + getCrew().getHits() + " Crew Hits.");
+            return true;
+        }
+        if (getFCSHits() >= 3) {
+            System.out.println(msg + fcsHits + " Fire Control Destroyed.");
+            return true;
+        }
+        if (getCICHits() >= 3) {
+            System.out.println(msg + cicHits + " Combat Information Center Destroyed.");
             return true;
         }
 
@@ -4473,11 +4721,47 @@ public class Aero extends Entity {
         }
     }
 
+    /**
+     * @return The total number of crew available to supplement marines on boarding actions.
+     *         Includes officers, enlisted, and bay personnel, but not marines/ba or passengers.
+     */
     public int getNCrew() {
         return 1;
     }
+    
+    
+    /**
+     * @return The total number of officers for vessels.
+     */
+    public int getNOfficers() {
+        return 0;
+    }
+    
+    /**
+     * @return The total number of gunners for vessels.
+     */
+    public int getNGunners() {
+        return 0;
+    }
 
+    /**
+     * @return The total passenger capacity.
+     */
     public int getNPassenger() {
+        return 0;
+    }
+
+    /**
+     * @return The number battlearmored marines available to vessels for boarding actions.
+     */
+    public int getNBattleArmor() {
+        return 0;
+    }
+
+    /**
+     * @return The number conventional marines available to vessels for boarding actions.
+     */
+    public int getNMarines() {
         return 0;
     }
 
@@ -4500,5 +4784,62 @@ public class Aero extends Entity {
     @Override
     public int getSpriteDrawPriority() {
         return 10;
+    }
+    
+    @Override
+    public List<Mounted> getActiveAMS() {
+        //Large craft use AMS and Point Defense bays
+        if ((this instanceof Dropship) 
+                || (this instanceof Jumpship)
+                || (this instanceof Warship)
+                || (this instanceof SpaceStation)) {  		
+
+            ArrayList<Mounted> ams = new ArrayList<>();
+            for (Mounted weapon : getWeaponBayList()) {
+                // Skip anything that's not an AMS, AMS Bay or Point Defense Bay
+                if (!weapon.getType().hasFlag(WeaponType.F_AMS)
+                        && !weapon.getType().hasFlag(WeaponType.F_AMSBAY)
+                        && !weapon.getType().hasFlag(WeaponType.F_PDBAY))  {
+                    continue;
+                }
+
+                // Make sure the AMS is good to go
+                if (!weapon.isReady() || weapon.isMissing()
+                        || weapon.curMode().equals("Off")
+                        || weapon.curMode().equals("Normal")) {
+                    continue;
+                }
+
+                // AMS blocked by transported units can not fire
+                if (isWeaponBlockedAt(weapon.getLocation(),
+                        weapon.isRearMounted())) {
+                    continue;
+                }
+
+                // Make sure ammo is loaded
+                for (int wId : weapon.getBayWeapons()) {
+                    Mounted bayW = getEquipment(wId);
+                    Mounted bayWAmmo = bayW.getLinked();
+                    if (!(weapon.getType().hasFlag(WeaponType.F_ENERGY)) 
+                            && ((bayWAmmo == null) || (bayWAmmo.getUsableShotsLeft() == 0)
+                                    || bayWAmmo.isDumping())) {
+                        loadWeapon(weapon);
+                        bayWAmmo = weapon.getLinked();
+                    }
+
+                    // try again
+                    if (!(weapon.getType().hasFlag(WeaponType.F_ENERGY)) 
+                            && ((bayWAmmo == null) || (bayWAmmo.getUsableShotsLeft() == 0)
+                                    || bayWAmmo.isDumping())) {
+                        // No ammo for this AMS.
+                        continue;
+                    }
+                }
+                ams.add(weapon);
+            }
+            return ams;
+        }
+        //ASFs and Small Craft should use regular old AMS...
+        return super.getActiveAMS();
     }
 }

@@ -3589,10 +3589,12 @@ public class ChatLounge extends AbstractPhaseDisplay
                 String errorMessage = "";
                 if (bayNumber != -1) {
                     Bay bay = loadingEntity.getBayById(bayNumber);
+                    double loadSize = entities.stream().mapToDouble(e -> bay.spaceForUnit(e)).sum();
                     capacity = bay.getUnused();
-                    hasEnoughCargoCapacity = entities.size() <= capacity;
+                    hasEnoughCargoCapacity = loadSize <= capacity;
                     errorMessage = Messages.getString("LoadingBay.baytoomany") + // $NON-NLS-2$
-                            " " + (int) capacity + ".";
+                            " " + (int) bay.getUnusedSlots()
+                            + bay.getDefaultSlotDescription() + ".";
                 } else {
                     HashMap<Long, Double> capacities, counts;
                     capacities = new HashMap<Long, Double>();
@@ -3751,23 +3753,31 @@ public class ChatLounge extends AbstractPhaseDisplay
             } else if (command.equalsIgnoreCase("RAPIDFIREMG_OFF") || command.equalsIgnoreCase("RAPIDFIREMG_ON")) {
                 boolean rapidFire = command.equalsIgnoreCase("RAPIDFIREMG_ON");
                 for (Entity e : entities) {
+                    boolean dirty = false;
                     for (Mounted m : e.getWeaponList()) {
                         WeaponType wtype = (WeaponType) m.getType();
                         if (!wtype.hasFlag(WeaponType.F_MG)) {
                             continue;
                         }
                         m.setRapidfire(rapidFire);
+                        dirty = true;
+                    }
+                    if (dirty) {
+                        clientgui.getClient().sendUpdateEntity(e);
                     }
                 }
             } else if (command.equalsIgnoreCase("HOTLOAD_OFF") || command.equalsIgnoreCase("HOTLOAD_ON")) {
                 boolean hotLoad = command.equalsIgnoreCase("HOTLOAD_ON");
                 for (Entity e : entities) {
+                    boolean dirty = false;
                     for (Mounted m : e.getWeaponList()) {
                         WeaponType wtype = (WeaponType) m.getType();
-                        if (!wtype.hasFlag(WeaponType.F_MISSILE) || (wtype.getAmmoType() != AmmoType.T_LRM)) {
+                        if (!wtype.hasFlag(WeaponType.F_MISSILE) 
+                                || (wtype.getAmmoType() != AmmoType.T_LRM)) {
                             continue;
                         }
                         m.setHotLoad(hotLoad);
+                        dirty = true;
                     }
                     for (Mounted m : e.getAmmo()) {
                         AmmoType atype = (AmmoType) m.getType();
@@ -3782,14 +3792,23 @@ public class ChatLounge extends AbstractPhaseDisplay
                                 m.setMode(i);
                             }
                         }
+                        dirty = true;
+                    }
+                    if (dirty) {
+                        clientgui.getClient().sendUpdateEntity(e);
                     }
                 }
             } else if (command.equalsIgnoreCase("SEARCHLIGHT_OFF") || command.equalsIgnoreCase("SEARCHLIGHT_ON")) {
                 boolean searchLight = command.equalsIgnoreCase("SEARCHLIGHT_ON");
                 for (Entity e : entities) {
+                    boolean dirty = false;
                     if (!e.hasQuirk(OptionsConstants.QUIRK_POS_SEARCHLIGHT)) {
                         e.setExternalSpotlight(searchLight);
                         e.setSpotlightState(searchLight);
+                        dirty = true;
+                    }
+                    if (dirty) {
+                        clientgui.getClient().sendUpdateEntity(e);
                     }
                 }
             }
@@ -3899,6 +3918,10 @@ public class ChatLounge extends AbstractPhaseDisplay
                         }
                         if (etype.hasFlag(WeaponType.F_MISSILE)) {
                             hasLRMS |= ((WeaponType) etype).getAmmoType() == AmmoType.T_LRM;
+                            hasHotLoad |= m.isHotLoaded();
+                        }
+                        if (etype.hasFlag(WeaponType.F_MISSILE)) {
+                            hasLRMS |= ((WeaponType) etype).getAmmoType() == AmmoType.T_LRM_IMP;
                             hasHotLoad |= m.isHotLoaded();
                         }
                     }
@@ -4070,7 +4093,9 @@ public class ChatLounge extends AbstractPhaseDisplay
                                             Bay bay = (Bay) t;
                                             menuItem = new JMenuItem("Into Bay #" + bay.getBayNumber() + " (Free "
                                                     + "Slots: "
-                                                    + (int) loader.getBayById(bay.getBayNumber()).getUnused() + ")");
+                                                    + (int) loader.getBayById(bay.getBayNumber()).getUnusedSlots()
+                                                    + loader.getBayById(bay.getBayNumber()).getDefaultSlotDescription()
+                                                    + ")");
                                             menuItem.setActionCommand(
                                                     "LOAD|" + loader.getId() + ":" + bay.getBayNumber());
                                             /*

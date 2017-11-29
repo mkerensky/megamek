@@ -14,6 +14,7 @@
 package megamek.common;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +133,7 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
     private Targetable airmechBombTarget = null;
 
     private int fuel;
+    private int currentfuel;
     private int whoFirst;
 
     // Capital Fighter stuff
@@ -245,6 +247,11 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
         }
         return mp;
     }
+    
+    // Use Mech mode to determine walk MP for BV calculations
+    public int getBVWalkMP() {
+        return super.getWalkMP(false, true, true);
+    }
 
     @Override
     public int getRunMP(boolean gravity, boolean ignoreheat, boolean ignoremodulararmor) {
@@ -254,7 +261,8 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
         } else if (getConversionMode() == CONV_MODE_AIRMECH) {
             mp = getAirMechFlankMP(gravity, ignoremodulararmor);
         } else {
-            mp = super.getRunMP(gravity, ignoreheat, ignoremodulararmor);
+            // conversion reduction has already been done at this point
+            return super.getRunMP(gravity, ignoreheat, ignoremodulararmor);
         }
         if (convertingNow) {
             mp /= 2;
@@ -270,7 +278,7 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
         } else if (getConversionMode() == CONV_MODE_AIRMECH) {
             mp = getAirMechFlankMP(gravity, ignoremodulararmor);
         } else {
-            mp = super.getRunMPwithoutMASC(gravity, ignoreheat, ignoremodulararmor);
+            return super.getRunMPwithoutMASC(gravity, ignoreheat, ignoremodulararmor);
         }
         if (convertingNow) {
             mp /= 2;
@@ -549,13 +557,18 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
     }
 
     @Override
+    public boolean canAssaultDrop() {
+        return getConversionMode() != CONV_MODE_FIGHTER;
+    }
+
+    @Override
     public boolean isLocationProhibited(Coords c, int currElevation) {
         // Fighter mode has the same terrain restrictions as ASFs.
         if (getConversionMode() == CONV_MODE_FIGHTER) {
-            IHex hex = game.getBoard().getHex(c);
-            if (hex.containsTerrain(Terrains.IMPASSABLE)) {
-                return !isAirborne();
+            if (isAirborne()) {
+                return false;
             }
+            IHex hex = game.getBoard().getHex(c);
 
             // Additional restrictions for hidden units
             if (isHidden()) {
@@ -1013,8 +1026,25 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
     public boolean canFall(boolean gyroLegDamage) {
         return getConversionMode() != CONV_MODE_FIGHTER && !isAirborneVTOLorWIGE();
     }
-
+    
+    private final static TechAdvancement[] TA_LAM = {
+            new TechAdvancement(TECH_BASE_IS).setISAdvancement(2683, 2688, DATE_NONE, 3085)
+                .setClanAdvancement(DATE_NONE, 2688, DATE_NONE, 2825)
+                .setPrototypeFactions(F_TH).setProductionFactions(F_TH)
+                .setTechRating(RATING_D).setAvailability(RATING_D, RATING_E, RATING_F, RATING_F)
+                .setStaticTechLevel(SimpleTechLevel.EXPERIMENTAL), //standard
+            new TechAdvancement(TECH_BASE_IS).setISAdvancement(2680, 2684, DATE_NONE, 2781)
+                .setClanAdvancement(DATE_NONE, 2684, DATE_NONE, 2801)
+                .setPrototypeFactions(F_TH).setProductionFactions(F_TH)
+                .setTechRating(RATING_E).setAvailability(RATING_E, RATING_F, RATING_X, RATING_X)
+                .setStaticTechLevel(SimpleTechLevel.EXPERIMENTAL) //bimodal
+    };
+    
     @Override
+    public TechAdvancement getConstructionTechAdvancement() {
+        return TA_LAM[lamType];
+    }
+    
     public int height() {
         if (getConversionMode() == CONV_MODE_MECH) {
             return super.height();
@@ -1086,6 +1116,11 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
         if (bc.length == bombChoices.length) {
             bombChoices = bc;
         }
+    }
+
+    @Override
+    public void clearBombChoices() {
+        Arrays.fill(bombChoices, 0);
     }
 
     @Override
@@ -1302,6 +1337,34 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
             return hits > 3 ? 5 : hits;
         }
     }
+    
+    //Landing mods for partial repairs
+    public int getLandingGearPartialRepairs() {
+    	if (getPartialRepairs().booleanOption("aero_gear_crit")) {
+        return 2;
+    	} else if (getPartialRepairs().booleanOption("aero_gear_replace")) {
+        return 1;
+    	} else {
+    	return 0;
+    	}
+    }
+    
+    //Avionics mods for partial repairs
+    public int getAvionicsMisreplaced() {
+    	if (getPartialRepairs().booleanOption("aero_avionics_replace")) {
+        return 1;
+    	} else {
+    	return 0;
+    	}
+    }
+    
+    public int getAvionicsMisrepaired() {
+    	if (getPartialRepairs().booleanOption("aero_avionics_crit")) {
+        return 1;
+    	} else {
+    	return 0;
+    	}
+    }    
 
     /**
      * In fighter mode the weapon arcs need to be translated to Aero arcs.
@@ -1501,7 +1564,21 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
 
     @Override
     public int getFuel() {
+        if ((getPartialRepairs().booleanOption("aero_asf_fueltank_crit"))
+        	|| (getPartialRepairs().booleanOption("aero_fueltank_crit"))) {
+        	return (int) (fuel * 0.9);
+        } else {
         return fuel;
+        }
+    }
+    
+    public int getCurrentFuel() {
+        if ((getPartialRepairs().booleanOption("aero_asf_fueltank_crit"))
+            	|| (getPartialRepairs().booleanOption("aero_fueltank_crit"))) {
+            	return (int) (currentfuel * 0.9);
+        } else {
+        return currentfuel;
+        }
     }
 
     /**
@@ -1513,6 +1590,11 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
     @Override
     public void setFuel(int gas) {
         fuel = gas;
+        currentfuel = gas;
+    }
+    
+    public void setCurrentFuel(int gas) {
+    	currentfuel = gas;
     }
 
     @Override
@@ -1845,7 +1927,11 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
         if (bombs > 0) {
             specialAbilities.put(BattleForceSPA.BOMB, bombs / 5);
         }
-        specialAbilities.put(BattleForceSPA.LAM, null);
+        if (lamType == LAM_BIMODAL) {
+            specialAbilities.put(BattleForceSPA.BIM, null);
+        } else {
+            specialAbilities.put(BattleForceSPA.LAM, null);
+        }
     }
 
     @Override
@@ -1986,4 +2072,5 @@ public class LandAirMech extends BipedMech implements IAero, IBomber {
     public long getEntityType() {
         return Entity.ETYPE_MECH | Entity.ETYPE_BIPED_MECH | Entity.ETYPE_LAND_AIR_MECH;
     }
+
 }
