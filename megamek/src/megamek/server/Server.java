@@ -1395,6 +1395,7 @@ public class Server implements Runnable {
             sFile = sFile.replace(".gz", "");
         }
         XStream xstream = new XStream();
+        xstream.setMode(XStream.ID_REFERENCES);
         String sFinalFile = sFile;
         if (!sFinalFile.endsWith(".sav")) {
             sFinalFile = sFile + ".sav";
@@ -1479,6 +1480,7 @@ public class Server implements Runnable {
         IGame newGame;
         try(InputStream is = new GZIPInputStream(new FileInputStream(f))) {
             XStream xstream = new XStream();
+            xstream.setMode(XStream.ID_REFERENCES);
             xstream.registerConverter(new Converter() {
                 @SuppressWarnings("rawtypes")
                 @Override
